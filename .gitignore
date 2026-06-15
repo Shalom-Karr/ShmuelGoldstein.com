@@ -1,0 +1,15 @@
+# Design references & source material — kept locally, not shipped
+chatgpt/
+content/
+OverView.md
+plan.md
+Testimonials.txt
+Testimonials.pages
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
