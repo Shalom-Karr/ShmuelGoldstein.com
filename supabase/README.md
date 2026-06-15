@@ -41,13 +41,14 @@ supabase db push   # applies anything in supabase/migrations/
 | `page_views` | Lightweight analytics | Anon insert/update, admin read |
 | `contact_messages` | "Send a note to the Rabbi" form | Anon insert, admin manage |
 
-### Storage buckets
+### Storage buckets (both public)
 
-| Bucket | Public | Used for |
-|---|---|---|
-| `assets` | yes | Photos, logos, shiur posters |
-| `shiurim` | yes | Audio/video files hosted by us |
-| `private` | no | Drafts, originals, backups — admin only |
+| Bucket | Used for |
+|---|---|
+| `assets` | Photos, logos, posters, thumbnails (small images) |
+| `shiurim` | Self-hosted audio/video for the Shiurim library |
+
+Both buckets are public-read. Only admins can write/update/delete (enforced via `is_admin()` in the storage policies).
 
 ## How the front-end uses this
 
