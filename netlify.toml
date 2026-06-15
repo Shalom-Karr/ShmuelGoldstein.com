@@ -2,10 +2,8 @@
   publish = "."
 
 [dev]
-  command = "python -m http.server 8888"
-  port = 8888
-  targetPort = 8888
   framework = "#static"
+  port = 8888
   autoLaunch = false
 
 [[headers]]

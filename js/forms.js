@@ -1,5 +1,6 @@
 (function () {
   const forms = document.querySelectorAll('form[data-netlify="true"]');
+  const isLocal = ['localhost', '127.0.0.1', ''].includes(location.hostname);
 
   forms.forEach((form) => {
     form.addEventListener('submit', async (e) => {
@@ -12,6 +13,14 @@
 
       const originalText = button ? button.textContent : '';
       if (button) { button.disabled = true; button.textContent = 'Sending…'; }
+
+      if (isLocal) {
+        await new Promise((r) => setTimeout(r, 350));
+        form.reset();
+        if (msg) msg.textContent = '(local dev — submission would go to Netlify on production)';
+        if (button) { button.disabled = false; button.textContent = originalText; }
+        return;
+      }
 
       try {
         const data = new FormData(form);
