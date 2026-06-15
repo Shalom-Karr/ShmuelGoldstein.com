@@ -1,0 +1,67 @@
+[build]
+  publish = "."
+
+[dev]
+  command = "python -m http.server 8888"
+  port = 8888
+  targetPort = 8888
+  framework = "#static"
+  autoLaunch = false
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[redirects]]
+  from = "/coaching"
+  to = "/coaching.html"
+  status = 200
+
+[[redirects]]
+  from = "/about"
+  to = "/about.html"
+  status = 200
+
+[[redirects]]
+  from = "/approach"
+  to = "/approach.html"
+  status = 200
+
+[[redirects]]
+  from = "/stories"
+  to = "/stories.html"
+  status = 200
+
+[[redirects]]
+  from = "/lets-talk"
+  to = "/lets-talk.html"
+  status = 200
+
+[[redirects]]
+  from = "/talk"
+  to = "/lets-talk.html"
+  status = 301
+
+[[redirects]]
+  from = "/discovery-call"
+  to = "/lets-talk.html"
+  status = 301
