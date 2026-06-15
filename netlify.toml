@@ -30,8 +30,23 @@
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[redirects]]
+  from = "/favicon.ico"
+  to = "/assets/favicons/favicon.ico"
+  status = 301
+
+[[redirects]]
+  from = "/site.webmanifest"
+  to = "/assets/favicons/site.webmanifest"
+  status = 301
+
+[[redirects]]
   from = "/coaching"
   to = "/coaching.html"
+  status = 200
+
+[[redirects]]
+  from = "/shiurim"
+  to = "/shiurim.html"
   status = 200
 
 [[redirects]]

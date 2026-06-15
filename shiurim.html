@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shiurim — Rabbi Shmuel Goldstein</title>
+  <meta name="description" content="Torah classes from Rabbi Shmuel Goldstein — Parsha, Tefila, Halacha, and Mussar. Watch, listen, and learn." />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="/assets/favicons/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicons/favicon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicons/apple-touch-icon.png" />
+  <link rel="manifest" href="/assets/favicons/site.webmanifest" />
+  <meta name="theme-color" content="#b85c1f" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav-row">
+    <a href="index.html" class="brand">
+      <span class="monogram">SG</span>
+      <span class="wordmark">Shmuel <span class="amp">·</span> Goldstein</span>
+    </a>
+    <nav class="primary-nav">
+      <a href="coaching.html">Coaching</a>
+      <a href="approach.html">Approach</a>
+      <a href="about.html">About</a>
+      <a href="shiurim.html">Shiurim</a>
+      <a href="stories.html">Stories</a>
+      <a href="lets-talk.html" class="nav-cta">Let's talk</a>
+    </nav>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="mobile-drawer">
+  <a href="coaching.html">Coaching</a>
+  <a href="approach.html">Approach</a>
+  <a href="about.html">About</a>
+  <a href="shiurim.html">Shiurim</a>
+  <a href="stories.html">Stories</a>
+  <a href="lets-talk.html">Let's talk</a>
+</div>
+
+<section class="hero hero-split">
+  <div class="hero-bg-portrait" aria-hidden="true">
+    <img src="assets/rabbi-goldstein.jpg" alt="" />
+  </div>
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-text">
+        <span class="eyebrow" data-reveal>Torah Classes</span>
+        <h1 data-reveal data-reveal-delay="100">Shiurim — <span class="accent">drawn from the source.</span></h1>
+        <p class="lead" data-reveal data-reveal-delay="200">Parsha, Tefila, Halacha, Mussar — recorded shiurim from the rabbi's weekly learning. Listen, watch, or read along.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="shiurim-section">
+  <div class="container">
+    <div class="shiurim-filters" role="tablist" aria-label="Filter shiurim by topic" data-reveal>
+      <button class="shiurim-filter is-active" data-topic="all">All</button>
+      <button class="shiurim-filter" data-topic="parsha">Parsha</button>
+      <button class="shiurim-filter" data-topic="tefila">Tefila</button>
+      <button class="shiurim-filter" data-topic="halacha">Halacha</button>
+      <button class="shiurim-filter" data-topic="mussar">Mussar</button>
+    </div>
+
+    <div class="shiurim-grid" id="shiurim-grid">
+
+      <article class="shiur-card" data-topic="parsha" data-source="youtube" data-source-id="dQw4w9WgXcQ" data-reveal>
+        <button class="shiur-thumb" type="button" aria-label="Play: Parsha Bereishis — Finding Yourself in the First Story">
+          <img src="https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg" alt="" loading="lazy" />
+          <span class="shiur-play" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </span>
+          <span class="shiur-source-badge">YouTube</span>
+          <span class="shiur-duration">30:30</span>
+        </button>
+        <div class="shiur-body">
+          <span class="shiur-topic">Parsha · Bereishis</span>
+          <h3>Finding Yourself in the First Story</h3>
+          <p>A look at how the opening of the Torah holds the keys to seeing who we're becoming.</p>
+          <span class="shiur-date">Oct 4, 2026</span>
+        </div>
+      </article>
+
+      <article class="shiur-card" data-topic="tefila" data-source="vimeo" data-source-id="76979871" data-reveal data-reveal-delay="100">
+        <button class="shiur-thumb" type="button" aria-label="Play: Tefila — Deeper Meaning in the Shemoneh Esrei">
+          <img src="https://vumbnail.com/76979871.jpg" alt="" loading="lazy" />
+          <span class="shiur-play" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </span>
+          <span class="shiur-source-badge">Vimeo</span>
+          <span class="shiur-duration">45:00</span>
+        </button>
+        <div class="shiur-body">
+          <span class="shiur-topic">Tefila · Shemoneh Esrei</span>
+          <h3>Deeper Meaning in the Shemoneh Esrei</h3>
+          <p>Patterns in the central prayer that change the way we daven.</p>
+          <span class="shiur-date">Sep 12, 2026</span>
+        </div>
+      </article>
+
+      <article class="shiur-card" data-topic="mussar" data-source="supabase" data-source-id="assets/sample-shiur.mp4" data-poster="assets/rabbi-goldstein.jpg" data-reveal data-reveal-delay="200">
+        <button class="shiur-thumb" type="button" aria-label="Play: Mussar — Living With Both Strength and Gentleness">
+          <img src="assets/rabbi-goldstein.jpg" alt="" loading="lazy" />
+          <span class="shiur-play" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </span>
+          <span class="shiur-source-badge">Self-Hosted</span>
+          <span class="shiur-duration">28:00</span>
+        </button>
+        <div class="shiur-body">
+          <span class="shiur-topic">Mussar</span>
+          <h3>Living With Both Strength and Gentleness</h3>
+          <p>What it really means to lead with both sides of your character — and why one without the other isn't enough.</p>
+          <span class="shiur-date">Aug 21, 2026</span>
+        </div>
+      </article>
+
+      <article class="shiur-card" data-topic="halacha" data-source="youtube" data-source-id="9bZkp7q19f0" data-reveal data-reveal-delay="300">
+        <button class="shiur-thumb" type="button" aria-label="Play: Halacha — The Mechanics of an Honest Question">
+          <img src="https://i.ytimg.com/vi/9bZkp7q19f0/hqdefault.jpg" alt="" loading="lazy" />
+          <span class="shiur-play" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </span>
+          <span class="shiur-source-badge">YouTube</span>
+          <span class="shiur-duration">22:15</span>
+        </button>
+        <div class="shiur-body">
+          <span class="shiur-topic">Halacha</span>
+          <h3>The Mechanics of an Honest Question</h3>
+          <p>Asking a Rav: how to ask what you actually want to know, and why most sh'eilos are smaller than they feel.</p>
+          <span class="shiur-date">Aug 7, 2026</span>
+        </div>
+      </article>
+
+    </div>
+
+    <p class="shiurim-empty" hidden>No shiurim yet for that topic — check back soon.</p>
+  </div>
+</section>
+
+<!-- player modal -->
+<div class="shiur-modal" id="shiur-modal" role="dialog" aria-modal="true" aria-hidden="true">
+  <button class="shiur-modal-close" aria-label="Close player">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M6 18L18 6"/></svg>
+  </button>
+  <div class="shiur-modal-stage" id="shiur-stage"></div>
+</div>
+
+<section class="section-terracotta pullquote">
+  <div class="container">
+    <span class="glyph">“</span>
+    <p class="pullquote-body" style="color:var(--paper);" data-reveal>Torah is the light, and practical tools are how it touches a Tuesday afternoon.</p>
+  </div>
+  <div class="pullquote-deco" style="border-color: rgba(255,255,255,0.22);"></div>
+</section>
+
+<section class="cta-banner">
+  <div class="container">
+    <div class="cta-banner-grid">
+      <div data-reveal="left">
+        <span class="eyebrow on-ink">Discovery Call</span>
+        <h2>Want to talk about <span class="accent">your life</span>, not just learn?</h2>
+        <p>Coaching takes the shiur from the screen to your actual relationships, decisions, and parenting. A free Discovery Call is the place to start.</p>
+      </div>
+      <div class="cta-banner-actions" data-reveal="right" data-reveal-delay="200">
+        <a href="lets-talk.html" class="btn btn-primary">Book a conversation</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <h3>Stay in touch</h3>
+        <p>Occasional notes on Torah, coaching, and meaningful living. No noise—maybe once a month.</p>
+        <form class="email-capture" name="newsletter" method="POST" data-netlify="true" data-netlify-honeypot="bot-field">
+          <input type="hidden" name="form-name" value="newsletter" />
+          <p class="hp" aria-hidden="true"><label>Leave this empty: <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
+          <input type="email" name="email" placeholder="your@email.com" required aria-label="Email address" />
+          <button type="submit">Join</button>
+        </form>
+        <div class="form-msg" aria-live="polite"></div>
+      </div>
+      <div class="footer-col">
+        <h3>Explore</h3>
+        <ul>
+          <li><a href="approach.html">The Approach</a></li>
+          <li><a href="coaching.html">Coaching</a></li>
+          <li><a href="coaching.html#group">Group Coaching</a></li>
+          <li><a href="shiurim.html">Shiurim</a></li>
+          <li><a href="stories.html">Client Stories</a></li>
+          <li><a href="about.html">About Rabbi Goldstein</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h3>Get in touch</h3>
+        <p>For coaching, speaking, or general inquiries.</p>
+        <a href="lets-talk.html" class="btn btn-ghost on-ink">Book a conversation</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span class="brand">
+        <span class="monogram on-ink">SG</span>
+        <span>Rabbi Shmuel Goldstein</span>
+      </span>
+      <span>© <span data-year></span> All rights reserved.</span>
+      <span>Coaching rooted in Torah.</span>
+      <span class="built-by">Built by <a href="https://github.com/Shalom-Karr" target="_blank" rel="noopener">Shalom Karr</a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+<script src="js/forms.js"></script>
+<script src="js/shiurim.js"></script>
+</body>
+</html>

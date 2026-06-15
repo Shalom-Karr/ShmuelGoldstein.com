@@ -6,11 +6,12 @@
   <title>Rabbi Shmuel Goldstein — Torah-Based Life &amp; Relationship Coaching</title>
   <meta name="description" content="A better life begins with how you live it. Honest conversation, practical tools, and Torah-rooted coaching for individuals, couples, and families." />
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="icon" href="/favicon.ico" sizes="any" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-  <link rel="manifest" href="/site.webmanifest" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+  <link rel="icon" href="/assets/favicons/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicons/favicon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicons/apple-touch-icon.png" />
+  <link rel="manifest" href="/assets/favicons/site.webmanifest" />
   <meta name="theme-color" content="#b85c1f" />
 </head>
 <body>
@@ -25,6 +26,7 @@
       <a href="coaching.html">Coaching</a>
       <a href="approach.html">Approach</a>
       <a href="about.html">About</a>
+      <a href="shiurim.html">Shiurim</a>
       <a href="stories.html">Stories</a>
       <a href="lets-talk.html" class="nav-cta">Let's talk</a>
     </nav>
@@ -38,6 +40,7 @@
   <a href="coaching.html">Coaching</a>
   <a href="approach.html">Approach</a>
   <a href="about.html">About</a>
+  <a href="shiurim.html">Shiurim</a>
   <a href="stories.html">Stories</a>
   <a href="lets-talk.html">Let's talk</a>
 </div>
@@ -125,26 +128,62 @@
   <div class="pullquote-deco" style="border-color: rgba(255,255,255,0.22);"></div>
 </section>
 
-<section class="section-ink">
+<section class="section-ink stories-section">
   <div class="container">
-    <span class="eyebrow on-ink" data-reveal>Client Stories</span>
-    <h2 class="section-heading" data-reveal data-reveal-delay="100">Quiet, lasting <span class="accent">change.</span></h2>
-
-    <div class="quote-stack cols-2" style="margin-top: 3.5rem;">
-      <div class="quote-card" data-reveal data-reveal-delay="200">
-        <span class="glyph">“</span>
-        <blockquote>Two and a half years after starting, I can honestly say I am a different person. I've learned powerful tools that help me through the toughest situations with my husband and children. Most of all, I have learned how to believe in myself.</blockquote>
-        <cite>Relationship Coaching Client</cite>
+    <div class="stories-header">
+      <div>
+        <span class="eyebrow on-ink" data-reveal>Client Stories</span>
+        <h2 class="section-heading" data-reveal data-reveal-delay="100">Quiet, lasting <span class="accent">change.</span></h2>
       </div>
-      <div class="quote-card" data-reveal data-reveal-delay="300">
-        <span class="glyph">“</span>
-        <blockquote>Shmuel immediately made me feel comfortable—more like guys talking than a counselor/client relationship. He helped me find my inner courage and live with both strength and gentleness. Worth the investment!</blockquote>
-        <cite>Men's Coaching Client</cite>
-      </div>
+      <a href="stories.html" class="text-link on-ink stories-header-link" data-reveal data-reveal-delay="200">Read all stories</a>
     </div>
 
-    <div style="margin-top: 3.5rem;" data-reveal>
-      <a href="stories.html" class="btn btn-ghost on-ink">Read more stories</a>
+    <div class="testimonial-carousel" data-reveal data-reveal-delay="200">
+      <div class="swiper testimonial-swiper">
+        <div class="swiper-wrapper">
+
+          <article class="swiper-slide quote-card">
+            <span class="glyph">“</span>
+            <blockquote>Two and a half years after starting, I can honestly say I am a different person. I've learned powerful tools that help me through the toughest situations with my husband and children. Most of all, I have learned how to believe in myself.</blockquote>
+            <cite>Relationship Coaching Client</cite>
+          </article>
+
+          <article class="swiper-slide quote-card">
+            <span class="glyph">“</span>
+            <blockquote>Shmuel immediately made me feel comfortable—more like guys talking than a counselor/client relationship. He helped me find my inner courage and live with both strength and gentleness. Worth the investment!</blockquote>
+            <cite>Men's Coaching Client</cite>
+          </article>
+
+          <article class="swiper-slide quote-card">
+            <span class="glyph">“</span>
+            <blockquote>I learned about elegance — a tool that completely changed the flavor of arguments in our marriage. They're rare now, and when they happen they're quick and one-sided. He feels I care more, and that's a reflection of the truth.</blockquote>
+            <cite>Relationship Coaching Client · Wife &amp; Mother</cite>
+          </article>
+
+          <article class="swiper-slide quote-card">
+            <span class="glyph">“</span>
+            <blockquote>He helped me find my inner sources of courage, enabling me to step into and live with both strength and gentleness — how to be a true "gentle-man." Worth the investment.</blockquote>
+            <cite>Men's Coaching Client</cite>
+          </article>
+
+        </div>
+      </div>
+
+      <div class="carousel-controls">
+        <button class="carousel-btn carousel-prev" aria-label="Previous story">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+
+        <div class="carousel-progress">
+          <span class="counter-current">01</span>
+          <span class="counter-track"><span class="counter-fill"></span></span>
+          <span class="counter-total">04</span>
+        </div>
+
+        <button class="carousel-btn carousel-next" aria-label="Next story">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 </section>
@@ -206,7 +245,9 @@
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 <script src="js/main.js"></script>
 <script src="js/forms.js"></script>
+<script src="js/carousel.js"></script>
 </body>
 </html>
