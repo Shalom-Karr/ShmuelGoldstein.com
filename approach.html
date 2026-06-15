@@ -141,8 +141,10 @@
       <div class="footer-col">
         <h3>Stay in touch</h3>
         <p>Occasional notes on Torah, coaching, and meaningful living. No noise—maybe once a month.</p>
-        <form class="email-capture" data-endpoint="">
-          <input type="email" placeholder="your@email.com" required aria-label="Email address" />
+        <form class="email-capture" name="newsletter" method="POST" data-netlify="true" data-netlify-honeypot="bot-field">
+          <input type="hidden" name="form-name" value="newsletter" />
+          <p class="hp" aria-hidden="true"><label>Leave this empty: <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
+          <input type="email" name="email" placeholder="your@email.com" required aria-label="Email address" />
           <button type="submit">Join</button>
         </form>
         <div class="form-msg" aria-live="polite"></div>
