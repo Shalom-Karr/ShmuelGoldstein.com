@@ -258,7 +258,6 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
   color: var(--ink);
   transition: background 0.4s ease, color 0.4s ease, border-color 0.4s ease, transform 0.6s var(--ease);
   position: relative;
-  font-variation-settings: 'opsz' 144;
 }
 
 .monogram::after {
@@ -288,7 +287,6 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 .wordmark .amp {
   font-style: italic;
   color: var(--terracotta);
-  font-variation-settings: 'opsz' 144;
 }
 
 .primary-nav { display: flex; align-items: center; gap: 2.25rem; }
@@ -401,8 +399,6 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 .mobile-drawer.is-open a:nth-child(4) { transition-delay: 0.25s; }
 .mobile-drawer.is-open a:nth-child(5) { transition-delay: 0.3s; }
 .mobile-drawer.is-open a:nth-child(6) { transition-delay: 0.35s; }
-.mobile-drawer.is-open a:nth-child(7) { transition-delay: 0.4s; }
-
 @media (max-width: 940px) {
   .primary-nav { display: none; }
   .nav-toggle { display: inline-flex; }
@@ -847,7 +843,6 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 
 .service-name {
   font-family: var(--serif-display);
-  font-variation-settings: 'opsz' 144;
   font-weight: 500;
   font-size: clamp(1.5rem, 2.2vw, 1.85rem);
   line-height: 1.15;
@@ -918,7 +913,6 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
   margin: 0 0 1.75rem;
   font-family: var(--serif-display);
   font-weight: 400;
-  font-variation-settings: 'opsz' 144;
   font-size: 1.4rem;
   line-height: 1.5;
   color: rgba(245, 235, 217, 0.96);
@@ -1099,7 +1093,6 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 .pullquote-body {
   font-family: var(--serif-display);
   font-style: italic;
-  font-variation-settings: 'opsz' 144;
   font-weight: 400;
   font-size: clamp(1.6rem, 3.4vw, 2.5rem);
   line-height: 1.35;
@@ -1212,7 +1205,6 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
   left: 50%;
   transform: translate(-50%, -50%);
   font-family: var(--serif-display);
-  font-variation-settings: 'opsz' 144;
   font-size: 6rem;
   color: var(--terracotta);
   opacity: 0.16;
@@ -1253,7 +1245,6 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 .hero-meta-item .num {
   font-family: var(--serif-display);
   font-style: italic;
-  font-variation-settings: 'opsz' 144;
   font-weight: 500;
   font-size: 1.75rem;
   color: var(--terracotta);
@@ -1287,7 +1278,6 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 /* Editorial dropcap on the first bio paragraph */
 .bio-text .prose > p:first-child::first-letter {
   font-family: var(--serif-display);
-  font-variation-settings: 'opsz' 144;
   font-weight: 500;
   font-size: 5.5rem;
   line-height: 0.85;
@@ -1352,7 +1342,6 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
   bottom: 1.5rem;
   font-family: var(--serif-display);
   font-style: italic;
-  font-variation-settings: 'opsz' 144;
   font-size: 1.35rem;
   font-weight: 400;
   line-height: 1.35;
@@ -1587,7 +1576,6 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 
 .writing-card h3 {
   font-family: var(--serif-display);
-  font-variation-settings: 'opsz' 144;
   font-weight: 500;
   font-size: 1.85rem;
   margin: 0 0 1rem;
@@ -1620,7 +1608,7 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 
 .prose p { margin: 0 0 1.6rem; }
 .prose p:last-child { margin-bottom: 0; }
-.prose em { font-family: var(--serif-display); font-style: italic; font-variation-settings: 'opsz' 144; color: var(--ink); }
+.prose em { font-family: var(--serif-display); font-style: italic; color: var(--ink); }
 
 .credentials {
   margin-top: 3.5rem;
@@ -1658,7 +1646,6 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 
 .credentials li {
   font-family: var(--serif-display);
-  font-variation-settings: 'opsz' 144;
   font-size: 1.2rem;
   font-weight: 400;
   color: var(--ink);
@@ -1970,7 +1957,6 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 
 .calendly-wrap h3 {
   font-family: var(--serif-display);
-  font-variation-settings: 'opsz' 144;
   font-weight: 500;
   font-size: 2rem;
   margin: 1rem 0 1rem;
@@ -2103,7 +2089,6 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
   color: rgba(245, 235, 217, 0.85);
   transition: color 0.3s, padding-left 0.3s var(--ease);
   font-family: var(--serif-display);
-  font-variation-settings: 'opsz' 144;
   font-size: 1.05rem;
   display: inline-block;
 }
@@ -2230,7 +2215,6 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 
 .cta-banner h2 {
   font-family: var(--serif-display);
-  font-variation-settings: 'opsz' 144;
   font-size: clamp(2.2rem, 4.5vw, 3.2rem);
   font-weight: 500;
   line-height: 1.1;
