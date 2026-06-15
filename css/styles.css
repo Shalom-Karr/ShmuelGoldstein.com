@@ -140,10 +140,15 @@ section { padding: var(--section-y) 0; }
   align-items: center;
   justify-content: center;
   gap: 1.5rem;
-  margin: 4rem auto;
+  margin: 0 auto;
+  padding: 1.5rem 0;
   max-width: 280px;
   color: var(--ink-faint);
 }
+
+/* When an ornament sits between two sections, tighten the spacing */
+.ornament + section { padding-top: 1.5rem; }
+section:has(+ .ornament) { padding-bottom: 1.5rem; }
 
 .ornament::before,
 .ornament::after {
