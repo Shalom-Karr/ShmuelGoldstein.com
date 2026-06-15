@@ -400,6 +400,8 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 .mobile-drawer.is-open a:nth-child(3) { transition-delay: 0.2s; }
 .mobile-drawer.is-open a:nth-child(4) { transition-delay: 0.25s; }
 .mobile-drawer.is-open a:nth-child(5) { transition-delay: 0.3s; }
+.mobile-drawer.is-open a:nth-child(6) { transition-delay: 0.35s; }
+.mobile-drawer.is-open a:nth-child(7) { transition-delay: 0.4s; }
 
 @media (max-width: 940px) {
   .primary-nav { display: none; }

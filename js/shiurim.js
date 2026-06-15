@@ -47,7 +47,7 @@
       const posterAttr = poster ? ` poster="${poster}"` : '';
       html = `<video src="${src}" controls autoplay playsinline${posterAttr}></video>`;
     } else {
-      html = `<p style="color:#fff;padding:2rem;">Unknown source.</p>`;
+      html = `<p style="color:var(--sand);padding:2rem;text-align:center;">Unknown video source.</p>`;
     }
 
     stage.innerHTML = html;
