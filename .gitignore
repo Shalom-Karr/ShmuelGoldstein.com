@@ -16,3 +16,9 @@ Thumbs.db
 
 # Local Netlify folder
 .netlify
+
+# Design / inspiration archives — local reference only
+_archive/
+
+# Operator-only / private working docs
+rabbi-outreach-email.txt
