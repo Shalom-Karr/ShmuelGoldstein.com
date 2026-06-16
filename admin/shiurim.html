@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shiurim — Admin</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" href="/assets/favicons/favicon.ico" />
+  <link rel="stylesheet" href="/admin/_shared/admin.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="/js/config.js" defer></script>
+  <script src="/admin/_shared/ui.js" defer></script>
+  <script src="/admin/_shared/auth.js" defer></script>
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <a class="admin-brand" href="/admin/">
+      <span class="monogram">SG</span>
+      <span class="admin-brand-text">Admin <small>shmuelgoldstein.com</small></span>
+    </a>
+    <nav class="admin-nav">
+      <a href="/admin/">Dashboard</a>
+      <a href="/admin/testimonials.html">Testimonials</a>
+      <a href="/admin/shiurim.html" class="is-active">Shiurim</a>
+      <a href="/admin/subscribers.html">Subscribers</a>
+      <a href="/" target="_blank">View site ↗</a>
+    </nav>
+    <div class="admin-identity">
+      <span class="role">Signed in</span>
+      <span class="who" data-admin-identity>—</span>
+      <button class="admin-btn admin-btn--ghost admin-btn--xs" data-admin-logout type="button">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-head">
+      <div>
+        <h1>Shiurim</h1>
+        <p class="sub">Torah classes shown on /shiurim. YouTube and Vimeo videos are referenced by their video ID; self-hosted videos live in the <code>shiurim</code> storage bucket.</p>
+      </div>
+      <button class="admin-btn admin-btn--primary" id="new-btn" type="button">+ New shiur</button>
+    </div>
+
+    <div id="tbl">Loading…</div>
+  </main>
+</div>
+
+<script>
+window.adminReady.then(async (ctx) => {
+  if (!ctx) return;
+  const { sb } = ctx;
+  const ui = window.adminUI;
+
+  const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 80);
+
+  const fetchAll = async () => {
+    const { data, error } = await sb.from('shiurim').select('*').order('recorded_at', { ascending: false, nullsFirst: false });
+    if (error) { ui.toast('Failed to load: ' + error.message, 'err'); return []; }
+    return data || [];
+  };
+
+  const render = (rows) => {
+    if (!rows.length) {
+      document.getElementById('tbl').innerHTML = '<div class="empty-state"><h3>No shiurim yet</h3><p>Click "New shiur" to add one.</p></div>';
+      return;
+    }
+    document.getElementById('tbl').innerHTML = `
+      <table class="admin-table">
+        <thead><tr>
+          <th>Title</th>
+          <th style="width: 100px">Source</th>
+          <th style="width: 110px">Topic</th>
+          <th style="width: 120px">Date</th>
+          <th style="width: 110px">Status</th>
+          <th style="width: 180px"></th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => `<tr data-id="${ui.escape(r.id)}">
+            <td><strong>${ui.escape(r.title)}</strong><br/><small style="color:var(--ink-muted);">${ui.escape(r.slug)}</small></td>
+            <td><span class="admin-pill admin-pill--muted">${ui.escape(r.source)}</span></td>
+            <td>${ui.escape(r.topic || '—')}</td>
+            <td>${ui.fmtDate(r.recorded_at)}</td>
+            <td>${r.published ? '<span class="admin-pill admin-pill--ok">Published</span>' : '<span class="admin-pill admin-pill--muted">Draft</span>'}</td>
+            <td class="row-actions">
+              <button class="admin-btn admin-btn--ghost admin-btn--xs" data-edit>Edit</button>
+              <button class="admin-btn admin-btn--danger admin-btn--xs" data-del>Delete</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+    document.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', (e) => openForm(rows.find(r => r.id === e.target.closest('tr').dataset.id))));
+    document.querySelectorAll('[data-del]').forEach((b)  => b.addEventListener('click', async (e) => {
+      const row = rows.find(r => r.id === e.target.closest('tr').dataset.id);
+      if (!(await ui.confirm(`Delete "${row.title}"?`))) return;
+      const { error } = await sb.from('shiurim').delete().eq('id', row.id);
+      if (error) ui.toast(error.message, 'err'); else { ui.toast('Deleted.'); refresh(); }
+    }));
+  };
+
+  const openForm = (row = null) => {
+    const isNew = !row;
+    const body = `
+      <div class="admin-field">
+        <label for="title">Title *</label>
+        <input id="title" class="admin-input" required value="${ui.escape(row?.title || '')}" />
+      </div>
+      <div class="admin-field">
+        <label for="slug">URL slug</label>
+        <input id="slug" class="admin-input" value="${ui.escape(row?.slug || '')}" placeholder="auto from title" />
+      </div>
+      <div class="admin-field">
+        <label for="description">Description</label>
+        <textarea id="description" class="admin-textarea" rows="4">${ui.escape(row?.description || '')}</textarea>
+      </div>
+      <div class="admin-grid-2">
+        <div class="admin-field">
+          <label for="source">Source *</label>
+          <select id="source" class="admin-select">
+            ${['youtube','vimeo','supabase'].map(v => `<option value="${v}" ${row?.source === v ? 'selected' : ''}>${v}</option>`).join('')}
+          </select>
+        </div>
+        <div class="admin-field">
+          <label for="source_id">Video ID / Path</label>
+          <input id="source_id" class="admin-input" value="${ui.escape(row?.source_id || row?.storage_path || '')}" placeholder="YouTube ID, Vimeo ID, or storage path" />
+        </div>
+      </div>
+      <div class="admin-grid-2">
+        <div class="admin-field">
+          <label for="topic">Topic</label>
+          <select id="topic" class="admin-select">
+            ${['','parsha','tefila','halacha','mussar','chassidus'].map(v => `<option value="${v}" ${row?.topic === v ? 'selected' : ''}>${v || '— none —'}</option>`).join('')}
+          </select>
+        </div>
+        <div class="admin-field">
+          <label for="recorded_at">Recorded date</label>
+          <input id="recorded_at" class="admin-input" type="date" value="${row?.recorded_at || ''}" />
+        </div>
+      </div>
+      <div class="admin-grid-2">
+        <div class="admin-field">
+          <label for="duration_seconds">Duration (seconds)</label>
+          <input id="duration_seconds" class="admin-input" type="number" min="0" value="${row?.duration_seconds || ''}" placeholder="1830" />
+        </div>
+        <div class="admin-field">
+          <label for="tags">Tags (comma-separated)</label>
+          <input id="tags" class="admin-input" value="${ui.escape((row?.tags || []).join(', '))}" placeholder="bereishis, self-knowledge" />
+        </div>
+      </div>
+      <div class="admin-field">
+        <label class="admin-checkbox"><input type="checkbox" id="published" ${row?.published ?? true ? 'checked' : ''}/><span>Published</span></label>
+      </div>`;
+    const m = ui.openModal(isNew ? 'New shiur' : 'Edit shiur', body, { submitLabel: 'Save' });
+    m.submit.addEventListener('click', async () => {
+      const title = m.body.querySelector('#title').value.trim();
+      const source = m.body.querySelector('#source').value;
+      const sourceIdRaw = m.body.querySelector('#source_id').value.trim();
+      const tagsStr = m.body.querySelector('#tags').value.trim();
+      const dur = parseInt(m.body.querySelector('#duration_seconds').value, 10);
+
+      const payload = {
+        title,
+        slug: m.body.querySelector('#slug').value.trim() || slugify(title),
+        description: m.body.querySelector('#description').value.trim() || null,
+        source,
+        source_id: source === 'supabase' ? null : sourceIdRaw || null,
+        storage_path: source === 'supabase' ? sourceIdRaw || null : null,
+        source_url: source === 'youtube' && sourceIdRaw ? `https://www.youtube.com/watch?v=${sourceIdRaw}` :
+                    source === 'vimeo' && sourceIdRaw   ? `https://vimeo.com/${sourceIdRaw}` : null,
+        topic: m.body.querySelector('#topic').value || null,
+        recorded_at: m.body.querySelector('#recorded_at').value || null,
+        duration_seconds: isNaN(dur) ? null : dur,
+        tags: tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [],
+        published: m.body.querySelector('#published').checked,
+      };
+      if (!payload.title) { ui.toast('Title is required.', 'err'); return; }
+      m.submit.disabled = true;
+      const q = isNew
+        ? sb.from('shiurim').insert(payload)
+        : sb.from('shiurim').update(payload).eq('id', row.id);
+      const { error } = await q;
+      m.submit.disabled = false;
+      if (error) ui.toast(error.message, 'err');
+      else { ui.toast(isNew ? 'Created.' : 'Saved.'); m.close(); refresh(); }
+    });
+  };
+
+  document.getElementById('new-btn').addEventListener('click', () => openForm());
+
+  const refresh = async () => render(await fetchAll());
+  refresh();
+});
+</script>
+</body>
+</html>

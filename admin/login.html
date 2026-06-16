@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Sign In — Rabbi Shmuel Goldstein</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" href="/assets/favicons/favicon.ico" />
+  <link rel="stylesheet" href="/admin/_shared/admin.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="/js/config.js" defer></script>
+  <script src="/admin/_shared/ui.js" defer></script>
+</head>
+<body class="login-shell">
+
+<div class="login-card">
+  <span class="monogram">SG</span>
+  <h1>Admin sign in</h1>
+  <p class="sub">Access is restricted to admins of shmuelgoldstein.com.</p>
+
+  <form id="login-form">
+    <div class="admin-field">
+      <label for="email">Email</label>
+      <input id="email" class="admin-input" type="email" autocomplete="email" required />
+    </div>
+    <div class="admin-field">
+      <label for="password">Password</label>
+      <input id="password" class="admin-input" type="password" autocomplete="current-password" required />
+    </div>
+    <button class="admin-btn admin-btn--primary" type="submit" style="width:100%; justify-content:center;">Sign in</button>
+  </form>
+
+  <div style="margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--line-fine);">
+    <button id="magic-link" class="admin-btn admin-btn--ghost" type="button" style="width:100%; justify-content:center;">
+      Email me a magic link instead
+    </button>
+  </div>
+
+  <p id="login-msg" style="margin: 1rem 0 0; min-height: 1.2em; font-size: 0.85rem; color: var(--ink-muted);"></p>
+</div>
+
+<script>
+  // Wait for SDK + config to load, then wire the form.
+  function whenReady(cb) {
+    if (window.getSupabase && window.getSupabase()) return cb();
+    setTimeout(() => whenReady(cb), 50);
+  }
+
+  whenReady(() => {
+    const sb = window.getSupabase();
+    const form = document.getElementById('login-form');
+    const msg = document.getElementById('login-msg');
+    const magic = document.getElementById('magic-link');
+
+    // If already signed in AND admin, redirect to dashboard.
+    sb.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return;
+      const { data } = await sb.from('admins').select('user_id').eq('user_id', session.user.id).maybeSingle();
+      if (data) location.replace('/admin/');
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.textContent = 'Signing in…';
+      const email = form.querySelector('#email').value.trim();
+      const password = form.querySelector('#password').value;
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) { msg.textContent = error.message; msg.style.color = 'var(--err)'; return; }
+      const { data: row } = await sb.from('admins').select('user_id').eq('user_id', data.user.id).maybeSingle();
+      if (!row) {
+        await sb.auth.signOut();
+        msg.textContent = 'That account is not an admin.';
+        msg.style.color = 'var(--err)';
+        return;
+      }
+      location.replace('/admin/');
+    });
+
+    magic.addEventListener('click', async () => {
+      const email = form.querySelector('#email').value.trim();
+      if (!email) { msg.textContent = 'Enter your email first.'; msg.style.color = 'var(--err)'; return; }
+      msg.textContent = 'Sending magic link…';
+      const { error } = await sb.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: location.origin + '/admin/' },
+      });
+      if (error) { msg.textContent = error.message; msg.style.color = 'var(--err)'; return; }
+      msg.textContent = 'Check your inbox — the link signs you in.';
+      msg.style.color = 'var(--ok)';
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Dashboard — Rabbi Shmuel Goldstein</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" href="/assets/favicons/favicon.ico" />
+  <link rel="stylesheet" href="/admin/_shared/admin.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="/js/config.js" defer></script>
+  <script src="/admin/_shared/ui.js" defer></script>
+  <script src="/admin/_shared/auth.js" defer></script>
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <a class="admin-brand" href="/admin/">
+      <span class="monogram">SG</span>
+      <span class="admin-brand-text">Admin <small>shmuelgoldstein.com</small></span>
+    </a>
+    <nav class="admin-nav">
+      <a href="/admin/" class="is-active">Dashboard</a>
+      <a href="/admin/testimonials.html">Testimonials</a>
+      <a href="/admin/shiurim.html">Shiurim</a>
+      <a href="/admin/subscribers.html">Subscribers</a>
+      <a href="/" target="_blank">View site ↗</a>
+    </nav>
+    <div class="admin-identity">
+      <span class="role">Signed in</span>
+      <span class="who" data-admin-identity>—</span>
+      <button class="admin-btn admin-btn--ghost admin-btn--xs" data-admin-logout type="button">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-head">
+      <div>
+        <h1>Dashboard</h1>
+        <p class="sub">A snapshot of what's live and what's flowed in lately.</p>
+      </div>
+    </div>
+
+    <div class="admin-stats" id="stats">
+      <div class="admin-stat"><div class="label">Testimonials</div><div class="num" data-stat="testimonials">—</div><div class="sub">published &amp; featured</div></div>
+      <div class="admin-stat"><div class="label">Shiurim</div><div class="num" data-stat="shiurim">—</div><div class="sub">published</div></div>
+      <div class="admin-stat"><div class="label">Subscribers</div><div class="num" data-stat="subscribers">—</div><div class="sub">active</div></div>
+      <div class="admin-stat"><div class="label">Events</div><div class="num" data-stat="events">—</div><div class="sub">upcoming</div></div>
+    </div>
+
+    <div class="admin-card">
+      <h2>Latest subscribers</h2>
+      <div id="latest-subs">Loading…</div>
+    </div>
+
+    <div class="admin-card">
+      <h2>Latest testimonials</h2>
+      <div id="latest-testimonials">Loading…</div>
+    </div>
+  </main>
+</div>
+
+<script>
+window.adminReady.then(async (ctx) => {
+  if (!ctx) return;
+  const { sb } = ctx;
+  const ui = window.adminUI;
+
+  const counts = await Promise.all([
+    sb.from('testimonials').select('id', { count: 'exact', head: true }).eq('published', true).eq('featured', true),
+    sb.from('shiurim').select('id', { count: 'exact', head: true }).eq('published', true),
+    sb.from('subscribers').select('id', { count: 'exact', head: true }).is('unsubscribed_at', null),
+    sb.from('events').select('id', { count: 'exact', head: true }).eq('status', 'upcoming'),
+  ]);
+  ['testimonials','shiurim','subscribers','events'].forEach((k, i) => {
+    document.querySelector(`[data-stat="${k}"]`).textContent = counts[i].count ?? '0';
+  });
+
+  const { data: subs } = await sb.from('subscribers')
+    .select('email, source, created_at').is('unsubscribed_at', null)
+    .order('created_at', { ascending: false }).limit(5);
+  document.getElementById('latest-subs').innerHTML = !subs || !subs.length
+    ? '<div class="empty-state"><h3>No subscribers yet</h3><p>They\'ll show up here as soon as the newsletter form fires.</p></div>'
+    : `<table class="admin-table"><thead><tr><th>Email</th><th>Source</th><th>When</th></tr></thead><tbody>${
+        subs.map(s => `<tr><td>${ui.escape(s.email)}</td><td><span class="admin-pill admin-pill--muted">${ui.escape(s.source || '—')}</span></td><td>${ui.fmtDate(s.created_at)}</td></tr>`).join('')
+      }</tbody></table>`;
+
+  const { data: ts } = await sb.from('testimonials')
+    .select('quote_text, attributed_to, featured, published, created_at')
+    .order('created_at', { ascending: false }).limit(5);
+  document.getElementById('latest-testimonials').innerHTML = !ts || !ts.length
+    ? '<div class="empty-state"><h3>No testimonials yet</h3></div>'
+    : `<table class="admin-table"><thead><tr><th>Quote</th><th>Attribution</th><th>Status</th></tr></thead><tbody>${
+        ts.map(t => `<tr>
+          <td>"${ui.escape((t.quote_text || '').slice(0, 90))}${t.quote_text && t.quote_text.length > 90 ? '…' : ''}"</td>
+          <td>${ui.escape(t.attributed_to || '—')}</td>
+          <td>${t.featured ? '<span class="admin-pill">Featured</span>' : ''} ${t.published ? '<span class="admin-pill admin-pill--ok">Published</span>' : '<span class="admin-pill admin-pill--muted">Draft</span>'}</td>
+        </tr>`).join('')
+      }</tbody></table>`;
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Subscribers — Admin</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" href="/assets/favicons/favicon.ico" />
+  <link rel="stylesheet" href="/admin/_shared/admin.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="/js/config.js" defer></script>
+  <script src="/admin/_shared/ui.js" defer></script>
+  <script src="/admin/_shared/auth.js" defer></script>
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <a class="admin-brand" href="/admin/">
+      <span class="monogram">SG</span>
+      <span class="admin-brand-text">Admin <small>shmuelgoldstein.com</small></span>
+    </a>
+    <nav class="admin-nav">
+      <a href="/admin/">Dashboard</a>
+      <a href="/admin/testimonials.html">Testimonials</a>
+      <a href="/admin/shiurim.html">Shiurim</a>
+      <a href="/admin/subscribers.html" class="is-active">Subscribers</a>
+      <a href="/" target="_blank">View site ↗</a>
+    </nav>
+    <div class="admin-identity">
+      <span class="role">Signed in</span>
+      <span class="who" data-admin-identity>—</span>
+      <button class="admin-btn admin-btn--ghost admin-btn--xs" data-admin-logout type="button">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-head">
+      <div>
+        <h1>Subscribers</h1>
+        <p class="sub">Email signups from the footer form. Broadcast email composer comes after the Workspace SMTP setup.</p>
+      </div>
+      <button class="admin-btn admin-btn--ghost" id="export-btn" type="button">Export CSV</button>
+    </div>
+
+    <div id="tbl">Loading…</div>
+  </main>
+</div>
+
+<script>
+window.adminReady.then(async (ctx) => {
+  if (!ctx) return;
+  const { sb } = ctx;
+  const ui = window.adminUI;
+
+  const fetchAll = async () => {
+    const { data, error } = await sb.from('subscribers').select('*').order('created_at', { ascending: false });
+    if (error) { ui.toast('Failed to load: ' + error.message, 'err'); return []; }
+    return data || [];
+  };
+
+  let rows = [];
+
+  const render = () => {
+    if (!rows.length) {
+      document.getElementById('tbl').innerHTML = '<div class="empty-state"><h3>No subscribers yet</h3><p>Newsletter signups from any page footer land here.</p></div>';
+      return;
+    }
+    document.getElementById('tbl').innerHTML = `
+      <table class="admin-table">
+        <thead><tr>
+          <th>Email</th>
+          <th style="width: 120px">Source</th>
+          <th style="width: 130px">Signed up</th>
+          <th style="width: 120px">Status</th>
+          <th style="width: 140px"></th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => `<tr data-id="${ui.escape(r.id)}">
+            <td>${ui.escape(r.email)}</td>
+            <td><span class="admin-pill admin-pill--muted">${ui.escape(r.source || '—')}</span></td>
+            <td>${ui.fmtDate(r.created_at)}</td>
+            <td>${r.unsubscribed_at ? '<span class="admin-pill admin-pill--err">Unsubscribed</span>' : '<span class="admin-pill admin-pill--ok">Active</span>'}</td>
+            <td class="row-actions">
+              ${r.unsubscribed_at
+                ? `<button class="admin-btn admin-btn--ghost admin-btn--xs" data-resub>Re-activate</button>`
+                : `<button class="admin-btn admin-btn--ghost admin-btn--xs" data-unsub>Unsubscribe</button>`}
+              <button class="admin-btn admin-btn--danger admin-btn--xs" data-del>Delete</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+    document.querySelectorAll('[data-unsub]').forEach(b => b.addEventListener('click', async (e) => {
+      const id = e.target.closest('tr').dataset.id;
+      const { error } = await sb.from('subscribers').update({ unsubscribed_at: new Date().toISOString() }).eq('id', id);
+      if (error) ui.toast(error.message, 'err'); else { ui.toast('Unsubscribed.'); refresh(); }
+    }));
+    document.querySelectorAll('[data-resub]').forEach(b => b.addEventListener('click', async (e) => {
+      const id = e.target.closest('tr').dataset.id;
+      const { error } = await sb.from('subscribers').update({ unsubscribed_at: null }).eq('id', id);
+      if (error) ui.toast(error.message, 'err'); else { ui.toast('Re-activated.'); refresh(); }
+    }));
+    document.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async (e) => {
+      const id = e.target.closest('tr').dataset.id;
+      const row = rows.find(r => r.id === id);
+      if (!(await ui.confirm(`Delete ${row.email}? This removes the record entirely.`))) return;
+      const { error } = await sb.from('subscribers').delete().eq('id', id);
+      if (error) ui.toast(error.message, 'err'); else { ui.toast('Deleted.'); refresh(); }
+    }));
+  };
+
+  document.getElementById('export-btn').addEventListener('click', () => {
+    if (!rows.length) { ui.toast('Nothing to export yet.', 'warn'); return; }
+    const csv = ['email,source,created_at,unsubscribed_at']
+      .concat(rows.map(r => `"${(r.email || '').replace(/"/g,'""')}","${r.source || ''}","${r.created_at || ''}","${r.unsubscribed_at || ''}"`))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(blob),
+      download: `subscribers-${new Date().toISOString().slice(0,10)}.csv`,
+    });
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  const refresh = async () => { rows = await fetchAll(); render(); };
+  refresh();
+});
+</script>
+</body>
+</html>

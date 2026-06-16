@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Testimonials — Admin</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" href="/assets/favicons/favicon.ico" />
+  <link rel="stylesheet" href="/admin/_shared/admin.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="/js/config.js" defer></script>
+  <script src="/admin/_shared/ui.js" defer></script>
+  <script src="/admin/_shared/auth.js" defer></script>
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <a class="admin-brand" href="/admin/">
+      <span class="monogram">SG</span>
+      <span class="admin-brand-text">Admin <small>shmuelgoldstein.com</small></span>
+    </a>
+    <nav class="admin-nav">
+      <a href="/admin/">Dashboard</a>
+      <a href="/admin/testimonials.html" class="is-active">Testimonials</a>
+      <a href="/admin/shiurim.html">Shiurim</a>
+      <a href="/admin/subscribers.html">Subscribers</a>
+      <a href="/" target="_blank">View site ↗</a>
+    </nav>
+    <div class="admin-identity">
+      <span class="role">Signed in</span>
+      <span class="who" data-admin-identity>—</span>
+      <button class="admin-btn admin-btn--ghost admin-btn--xs" data-admin-logout type="button">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-head">
+      <div>
+        <h1>Testimonials</h1>
+        <p class="sub">Quotes shown in the home-page carousel and the Stories page. Drag-order = <code>sort_order</code> (lower first).</p>
+      </div>
+      <button class="admin-btn admin-btn--primary" id="new-btn" type="button">+ New testimonial</button>
+    </div>
+
+    <div id="tbl">Loading…</div>
+  </main>
+</div>
+
+<script>
+window.adminReady.then(async (ctx) => {
+  if (!ctx) return;
+  const { sb } = ctx;
+  const ui = window.adminUI;
+
+  const fetchAll = async () => {
+    const { data, error } = await sb.from('testimonials')
+      .select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false });
+    if (error) { ui.toast('Failed to load: ' + error.message, 'err'); return []; }
+    return data || [];
+  };
+
+  const render = (rows) => {
+    if (!rows.length) {
+      document.getElementById('tbl').innerHTML = '<div class="empty-state"><h3>No testimonials yet</h3><p>Click "New testimonial" to add one.</p></div>';
+      return;
+    }
+    document.getElementById('tbl').innerHTML = `
+      <table class="admin-table">
+        <thead><tr>
+          <th style="width: 70px">Order</th>
+          <th>Quote</th>
+          <th>Attribution</th>
+          <th>Status</th>
+          <th style="width: 180px"></th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => `<tr data-id="${ui.escape(r.id)}">
+            <td><code>${r.sort_order ?? '—'}</code></td>
+            <td><em style="font-family:'Instrument Serif',serif;">"${ui.escape((r.quote_text || '').slice(0, 140))}${r.quote_text && r.quote_text.length > 140 ? '…' : ''}"</em></td>
+            <td>${ui.escape(r.attributed_to || '—')}${r.role ? `<br/><small style="color:var(--ink-muted);">${ui.escape(r.role)}</small>` : ''}</td>
+            <td>
+              ${r.published ? '<span class="admin-pill admin-pill--ok">Published</span>' : '<span class="admin-pill admin-pill--muted">Draft</span>'}
+              ${r.featured  ? '<span class="admin-pill">Featured</span>' : ''}
+            </td>
+            <td class="row-actions">
+              <button class="admin-btn admin-btn--ghost admin-btn--xs" data-edit>Edit</button>
+              <button class="admin-btn admin-btn--danger admin-btn--xs" data-del>Delete</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+    document.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', (e) => openForm(rows.find(r => r.id === e.target.closest('tr').dataset.id))));
+    document.querySelectorAll('[data-del]').forEach((b)  => b.addEventListener('click', async (e) => {
+      const row = rows.find(r => r.id === e.target.closest('tr').dataset.id);
+      if (!(await ui.confirm(`Delete the testimonial from "${row.attributed_to || 'this client'}"?`))) return;
+      const { error } = await sb.from('testimonials').delete().eq('id', row.id);
+      if (error) ui.toast(error.message, 'err'); else { ui.toast('Deleted.'); refresh(); }
+    }));
+  };
+
+  const openForm = (row = null) => {
+    const isNew = !row;
+    const body = `
+      <div class="admin-field">
+        <label for="quote_text">Quote</label>
+        <textarea id="quote_text" class="admin-textarea" rows="6" required>${ui.escape(row?.quote_text || '')}</textarea>
+      </div>
+      <div class="admin-grid-2">
+        <div class="admin-field">
+          <label for="attributed_to">Attribution *</label>
+          <input id="attributed_to" class="admin-input" required value="${ui.escape(row?.attributed_to || '')}" placeholder="e.g. Relationship Coaching Client" />
+        </div>
+        <div class="admin-field">
+          <label for="role">Role (optional)</label>
+          <input id="role" class="admin-input" value="${ui.escape(row?.role || '')}" placeholder="Wife & Mother" />
+        </div>
+      </div>
+      <div class="admin-grid-2">
+        <div class="admin-field">
+          <label for="category">Category</label>
+          <select id="category" class="admin-select">
+            ${['','relationship','mens','group','personal'].map(v => `<option value="${v}" ${row?.category === v ? 'selected' : ''}>${v || '— none —'}</option>`).join('')}
+          </select>
+        </div>
+        <div class="admin-field">
+          <label for="sort_order">Sort order</label>
+          <input id="sort_order" class="admin-input" type="number" value="${row?.sort_order ?? 100}" />
+        </div>
+      </div>
+      <div class="admin-field">
+        <label class="admin-checkbox"><input type="checkbox" id="featured" ${row?.featured ?? true ? 'checked' : ''}/><span>Featured in carousel</span></label>
+        <label class="admin-checkbox" style="margin-top:0.5rem;"><input type="checkbox" id="published" ${row?.published ?? true ? 'checked' : ''}/><span>Published (visible on site)</span></label>
+      </div>`;
+    const m = ui.openModal(isNew ? 'New testimonial' : 'Edit testimonial', body, { submitLabel: 'Save' });
+    m.submit.addEventListener('click', async () => {
+      const payload = {
+        quote_text: m.body.querySelector('#quote_text').value.trim(),
+        attributed_to: m.body.querySelector('#attributed_to').value.trim(),
+        role: m.body.querySelector('#role').value.trim() || null,
+        category: m.body.querySelector('#category').value || null,
+        sort_order: parseInt(m.body.querySelector('#sort_order').value, 10) || 100,
+        featured: m.body.querySelector('#featured').checked,
+        published: m.body.querySelector('#published').checked,
+      };
+      if (!payload.quote_text || !payload.attributed_to) { ui.toast('Quote and attribution are required.', 'err'); return; }
+      m.submit.disabled = true;
+      const q = isNew
+        ? sb.from('testimonials').insert(payload)
+        : sb.from('testimonials').update(payload).eq('id', row.id);
+      const { error } = await q;
+      m.submit.disabled = false;
+      if (error) ui.toast(error.message, 'err');
+      else { ui.toast(isNew ? 'Created.' : 'Saved.'); m.close(); refresh(); }
+    });
+  };
+
+  document.getElementById('new-btn').addEventListener('click', () => openForm());
+
+  const refresh = async () => render(await fetchAll());
+  refresh();
+});
+</script>
+</body>
+</html>
