@@ -70,7 +70,7 @@
       <a href="lets-talk.html" class="nav-cta">Let's talk</a>
     </nav>
     <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      <svg class="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M3 12h18M3 18h18"/></svg><svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M6 18L18 6"/></svg>
     </button>
   </div>
 </header>
@@ -104,7 +104,16 @@
   </div>
 </section>
 
-<section class="bio-section">
+<div class="container">
+  <nav class="page-nav" aria-label="On this page">
+    <a href="#bio" data-scroll-to="#bio">Biography</a>
+    <a href="#journey" data-scroll-to="#journey">Journey</a>
+    <a href="#values" data-scroll-to="#values">Values</a>
+    <a href="#writing" data-scroll-to="#writing">Writing</a>
+  </nav>
+</div>
+
+<section id="bio" class="bio-section">
   <div class="container">
     <div class="bio-grid">
       <div class="bio-text" data-reveal="left">
@@ -145,7 +154,7 @@
   </div>
 </section>
 
-<section class="journey-section">
+<section id="journey" class="journey-section">
   <div class="container">
     <div class="journey-grid">
       <div class="journey-meta" data-reveal="left">
@@ -163,7 +172,7 @@
   </div>
 </section>
 
-<section class="values-section">
+<section id="values" class="values-section">
   <div class="container">
     <div class="values-grid">
 
@@ -185,7 +194,7 @@
   </div>
 </section>
 
-<section class="writing-section">
+<section id="writing" class="writing-section">
   <div class="container">
     <span class="eyebrow" data-reveal>Writing</span>
     <h2 class="section-heading" data-reveal data-reveal-delay="100">Books &amp; <span class="accent">teachings.</span></h2>
@@ -210,13 +219,6 @@
   </div>
 </section>
 
-<section class="section-terracotta pullquote">
-  <div class="container">
-    <span class="glyph">“</span>
-    <p class="pullquote-body" style="color:var(--paper);" data-reveal>You don't need fixing. You need the right tools—and someone who believes you're capable of using them.</p>
-  </div>
-  <div class="pullquote-deco" style="border-color: rgba(255,255,255,0.22);"></div>
-</section>
 
 <section class="cta-banner">
   <div class="container">
@@ -238,7 +240,7 @@
     <div class="footer-grid">
       <div class="footer-col">
         <h3>Stay in touch</h3>
-        <p>Occasional notes on Torah, coaching, and meaningful living. No noise—maybe once a month.</p>
+        <p>One short email a month — Torah-rooted tools you can put to work this week. No noise, easy unsubscribe.</p>
         <form class="email-capture" name="newsletter" method="POST" data-netlify="true" data-netlify-honeypot="bot-field">
           <input type="hidden" name="form-name" value="newsletter" />
           <p class="hp" aria-hidden="true"><label>Leave this empty: <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>

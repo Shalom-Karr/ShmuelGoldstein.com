@@ -44,7 +44,7 @@
       <a href="lets-talk.html" class="nav-cta">Let's talk</a>
     </nav>
     <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      <svg class="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M3 12h18M3 18h18"/></svg><svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M6 18L18 6"/></svg>
     </button>
   </div>
 </header>
@@ -76,13 +76,10 @@
 <section style="padding-top: 0;">
   <div class="container-narrow">
     <div class="calendly-wrap" data-reveal>
-      <span class="eyebrow muted">Book Your Call</span>
+      <span class="eyebrow">Book Your Call</span>
       <h3 style="margin-top: 0.75rem;">Pick a time that <em class="accent">works for you.</em></h3>
-      <p>Calendly will open below. If you have trouble booking, email and we'll find a time directly.</p>
-      <a href="https://calendly.com/" target="_blank" rel="noopener" class="btn btn-primary">Open the calendar</a>
-      <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--line-fine); font-size: 0.9rem; color: var(--ink-muted); font-style: italic;">
-        Live Calendly embed coming soon — placeholder link above for now.
-      </div>
+      <p>The booking calendar opens in a new tab. Sixty-minute slot, phone or Zoom, free — no preparation needed.</p>
+      <a href="https://calendly.com/" target="_blank" rel="noopener" class="btn btn-primary">Open the calendar in a new tab</a>
     </div>
   </div>
 </section>
@@ -93,27 +90,23 @@
     <h2 class="section-heading" data-reveal data-reveal-delay="100">A conversation, <span class="accent">not a pitch.</span></h2>
     <p class="section-lead" data-reveal data-reveal-delay="200">A few things people ask before booking.</p>
 
-    <div class="services-grid" style="margin-top: 3.5rem;">
-      <div class="service-row" data-reveal data-reveal-delay="100">
-        <span class="service-num">N° 01</span>
-        <h3 class="service-name">Do I need to prepare?</h3>
-        <p class="service-desc">No. Bring what's on your mind. If we work together later, we'll structure the work then. The Discovery Call is just for talking.</p>
-      </div>
-      <div class="service-row" data-reveal data-reveal-delay="200">
-        <span class="service-num">N° 02</span>
-        <h3 class="service-name">What does it cost?</h3>
-        <p class="service-desc">The Discovery Call is free. If we decide to work together, we'll discuss pricing and structure that fits your situation.</p>
-      </div>
-      <div class="service-row" data-reveal data-reveal-delay="300">
-        <span class="service-num">N° 03</span>
-        <h3 class="service-name">What if we're not a fit?</h3>
-        <p class="service-desc">That's a normal outcome. You'll leave with a clearer picture of what you actually need—even if it's someone else.</p>
-      </div>
-      <div class="service-row" data-reveal data-reveal-delay="400">
-        <span class="service-num">N° 04</span>
-        <h3 class="service-name">Do you work internationally?</h3>
-        <p class="service-desc">Yes. Most sessions are by Zoom or phone. Clients are based around the world.</p>
-      </div>
+    <div class="faq-list">
+      <details class="faq-item" data-reveal data-reveal-delay="100">
+        <summary>Do I need to prepare?</summary>
+        <div class="faq-body">No. Bring what's on your mind. If we work together later, we'll structure the work then — the Discovery Call is just for talking.</div>
+      </details>
+      <details class="faq-item" data-reveal data-reveal-delay="150">
+        <summary>What does it cost?</summary>
+        <div class="faq-body">The Discovery Call is free. If we decide to work together, we'll discuss pricing and structure that fits your situation.</div>
+      </details>
+      <details class="faq-item" data-reveal data-reveal-delay="200">
+        <summary>What if we're not a fit?</summary>
+        <div class="faq-body">That's a normal outcome. You'll leave with a clearer picture of what you actually need — even if it's someone else.</div>
+      </details>
+      <details class="faq-item" data-reveal data-reveal-delay="250">
+        <summary>Do you work internationally?</summary>
+        <div class="faq-body">Yes. Most sessions are by Zoom or phone. Clients are based around the world.</div>
+      </details>
     </div>
   </div>
 </section>
@@ -139,20 +132,13 @@
   </div>
 </section>
 
-<section class="section-terracotta pullquote">
-  <div class="container">
-    <span class="glyph">“</span>
-    <p class="pullquote-body" style="color:var(--paper);" data-reveal>You don't need fixing. You need the right tools—and someone who believes you're capable of using them.</p>
-  </div>
-  <div class="pullquote-deco" style="border-color: rgba(255,255,255,0.22);"></div>
-</section>
 
 <footer class="site-footer">
   <div class="container">
     <div class="footer-grid">
       <div class="footer-col">
         <h3>Stay in touch</h3>
-        <p>Occasional notes on Torah, coaching, and meaningful living. No noise—maybe once a month.</p>
+        <p>One short email a month — Torah-rooted tools you can put to work this week. No noise, easy unsubscribe.</p>
         <form class="email-capture" name="newsletter" method="POST" data-netlify="true" data-netlify-honeypot="bot-field">
           <input type="hidden" name="form-name" value="newsletter" />
           <p class="hp" aria-hidden="true"><label>Leave this empty: <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>

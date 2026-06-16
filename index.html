@@ -59,7 +59,7 @@
       <a href="lets-talk.html" class="nav-cta">Let's talk</a>
     </nav>
     <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      <svg class="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M3 12h18M3 18h18"/></svg><svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M6 18L18 6"/></svg>
     </button>
   </div>
 </header>
@@ -92,12 +92,19 @@
         <p class="lead" data-reveal data-reveal-delay="300">Honest conversation. Practical tools. The courage to create more meaningful relationships—with others and with yourself.</p>
         <div class="hero-actions" data-reveal data-reveal-delay="400">
           <a href="lets-talk.html" class="btn btn-primary">Book a conversation</a>
-          <a href="#approach" class="text-link">Explore my approach</a>
+          <a href="#approach" class="text-link" data-scroll-to="#approach">Explore my approach</a>
+        </div>
+        <div class="hero-meta" data-reveal data-reveal-delay="500">
+          <span class="hero-meta-item"><span class="num">40+</span> years in Torah study</span>
+          <span class="hero-meta-divider"></span>
+          <span class="hero-meta-item"><span class="num">2</span> books authored</span>
+          <span class="hero-meta-divider"></span>
+          <span class="hero-meta-item"><span class="num">∞</span> conversations</span>
         </div>
       </div>
     </div>
   </div>
-  <span class="scroll-hint">Read on</span>
+  <button type="button" class="scroll-hint" data-scroll-to="#approach" aria-label="Scroll to The Approach section">Read on</button>
 </section>
 
 <section id="approach" class="section-paper">
@@ -236,7 +243,7 @@
     <div class="footer-grid">
       <div class="footer-col">
         <h3>Stay in touch</h3>
-        <p>Occasional notes on Torah, coaching, and meaningful living. No noise—maybe once a month.</p>
+        <p>One short email a month — Torah-rooted tools you can put to work this week. No noise, easy unsubscribe.</p>
         <form class="email-capture" name="newsletter" method="POST" data-netlify="true" data-netlify-honeypot="bot-field">
           <input type="hidden" name="form-name" value="newsletter" />
           <p class="hp" aria-hidden="true"><label>Leave this empty: <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
