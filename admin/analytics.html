@@ -135,6 +135,7 @@ window.adminReady.then(async (ctx) => {
     // Recent individual views
     const { data: recent } = await sb.from('page_views')
       .select('path, referrer, duration_ms, max_scroll_pct, created_at')
+      .gte('created_at', since)
       .order('created_at', { ascending: false })
       .limit(20);
 

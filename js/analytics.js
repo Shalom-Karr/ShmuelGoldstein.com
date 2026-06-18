@@ -10,7 +10,14 @@
   var SESSION_KEY = 'sg_sid';
   var sessionId = localStorage.getItem(SESSION_KEY);
   if (!sessionId) {
-    sessionId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
+    // Use crypto.randomUUID where available; fall back to crypto.getRandomValues
+    if (crypto.randomUUID) {
+      sessionId = crypto.randomUUID();
+    } else {
+      var arr = new Uint8Array(16);
+      crypto.getRandomValues(arr);
+      sessionId = Array.from(arr, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+    }
     localStorage.setItem(SESSION_KEY, sessionId);
   }
 
