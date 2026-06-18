@@ -26,6 +26,7 @@
       <a href="/admin/testimonials.html">Testimonials</a>
       <a href="/admin/shiurim.html">Shiurim</a>
       <a href="/admin/subscribers.html">Subscribers</a>
+      <a href="/admin/messages.html">Messages</a>
       <a href="/" target="_blank">View site ↗</a>
     </nav>
     <div class="admin-identity">
@@ -48,6 +49,7 @@
       <div class="admin-stat"><div class="label">Shiurim</div><div class="num" data-stat="shiurim">—</div><div class="sub">published</div></div>
       <div class="admin-stat"><div class="label">Subscribers</div><div class="num" data-stat="subscribers">—</div><div class="sub">active</div></div>
       <div class="admin-stat"><div class="label">Events</div><div class="num" data-stat="events">—</div><div class="sub">upcoming</div></div>
+      <div class="admin-stat"><div class="label">Messages</div><div class="num" data-stat="messages">—</div><div class="sub">new</div></div>
     </div>
 
     <div class="admin-card">
@@ -58,6 +60,11 @@
     <div class="admin-card">
       <h2>Latest testimonials</h2>
       <div id="latest-testimonials">Loading…</div>
+    </div>
+
+    <div class="admin-card">
+      <h2>Latest messages</h2>
+      <div id="latest-messages">Loading…</div>
     </div>
   </main>
 </div>
@@ -74,8 +81,9 @@ window.adminReady.then(async (ctx) => {
     sb.from('shiurim').select('id', { count: 'exact', head: true }).eq('published', true),
     sb.from('subscribers').select('id', { count: 'exact', head: true }).is('unsubscribed_at', null),
     sb.from('events').select('id', { count: 'exact', head: true }).eq('status', 'upcoming'),
+    sb.from('contact_messages').select('id', { count: 'exact', head: true }).eq('status', 'new'),
   ]);
-  ['testimonials','shiurim','subscribers','events'].forEach((k, i) => {
+  ['testimonials','shiurim','subscribers','events','messages'].forEach((k, i) => {
     document.querySelector(`[data-stat="${k}"]`).textContent = counts[i].count ?? '0';
   });
 
@@ -98,6 +106,24 @@ window.adminReady.then(async (ctx) => {
           <td>"${ui.escape((t.quote_text || '').slice(0, 90))}${t.quote_text && t.quote_text.length > 90 ? '…' : ''}"</td>
           <td>${ui.escape(t.attributed_to || '—')}</td>
           <td>${t.featured ? '<span class="admin-pill">Featured</span>' : ''} ${t.published ? '<span class="admin-pill admin-pill--ok">Published</span>' : '<span class="admin-pill admin-pill--muted">Draft</span>'}</td>
+        </tr>`).join('')
+      }</tbody></table>`;
+
+  const { data: msgs } = await sb.from('contact_messages')
+    .select('name, email, subject, status, created_at')
+    .order('created_at', { ascending: false }).limit(5);
+  const statusPill = (s) => {
+    const map = { new: 'admin-pill--warn', read: 'admin-pill--muted', replied: 'admin-pill--ok' };
+    return `<span class="admin-pill ${map[s] || ''}">${ui.escape(s)}</span>`;
+  };
+  document.getElementById('latest-messages').innerHTML = !msgs || !msgs.length
+    ? '<div class="empty-state"><h3>No messages yet</h3><p>Contact form submissions will appear here.</p></div>'
+    : `<table class="admin-table"><thead><tr><th>Name</th><th>Subject</th><th>Status</th><th>When</th></tr></thead><tbody>${
+        msgs.map(m => `<tr>
+          <td>${ui.escape(m.name)}</td>
+          <td>${ui.escape(m.subject || '—')}</td>
+          <td>${statusPill(m.status)}</td>
+          <td>${ui.fmtDate(m.created_at)}</td>
         </tr>`).join('')
       }</tbody></table>`;
 });

@@ -152,6 +152,43 @@
   </div>
 </section>
 
+<section>
+  <div class="container-narrow">
+    <span class="eyebrow" data-reveal>Send a Message</span>
+    <h2 class="section-heading" data-reveal data-reveal-delay="100">Drop a note — <span class="accent">no pressure.</span></h2>
+    <p class="section-lead" data-reveal data-reveal-delay="200">For coaching inquiries, scheduling questions, speaking requests, or anything else on your mind.</p>
+
+    <form class="contact-form" name="contact" method="POST" action="/thank-you.html" data-netlify="true" data-netlify-honeypot="bot-field" data-reveal data-reveal-delay="300">
+      <input type="hidden" name="form-name" value="contact" />
+      <p class="hp" aria-hidden="true"><label>Leave this empty: <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
+
+      <div class="contact-form-grid">
+        <div class="contact-field">
+          <label for="contact-name">Name</label>
+          <input id="contact-name" type="text" name="name" required placeholder="Your name" />
+        </div>
+        <div class="contact-field">
+          <label for="contact-email">Email</label>
+          <input id="contact-email" type="email" name="email" required placeholder="your@email.com" />
+        </div>
+      </div>
+
+      <div class="contact-field">
+        <label for="contact-subject">Subject <span class="optional">(optional)</span></label>
+        <input id="contact-subject" type="text" name="subject" placeholder="What's this about?" />
+      </div>
+
+      <div class="contact-field">
+        <label for="contact-message">Message</label>
+        <textarea id="contact-message" name="message" rows="5" required placeholder="What's on your mind?"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Send message</button>
+    </form>
+    <div class="form-msg contact-form-msg" aria-live="polite"></div>
+  </div>
+</section>
+
 
 <footer class="site-footer">
   <div class="container">
@@ -159,7 +196,7 @@
       <div class="footer-col">
         <h3>Stay in touch</h3>
         <p>One short email a month — Torah-rooted tools you can put to work this week. No noise, easy unsubscribe.</p>
-        <form class="email-capture" name="newsletter" method="POST" data-netlify="true" data-netlify-honeypot="bot-field">
+        <form class="email-capture" name="newsletter" method="POST" action="/thank-you.html" data-netlify="true" data-netlify-honeypot="bot-field">
           <input type="hidden" name="form-name" value="newsletter" />
           <p class="hp" aria-hidden="true"><label>Leave this empty: <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
           <input type="email" name="email" placeholder="your@email.com" required aria-label="Email address" />

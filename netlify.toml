@@ -80,6 +80,11 @@
   to = "/lets-talk.html"
   status = 301
 
+[[redirects]]
+  from = "/thank-you"
+  to = "/thank-you.html"
+  status = 200
+
 # Catch-all 404 — must be the LAST redirect rule
 [[redirects]]
   from = "/*"

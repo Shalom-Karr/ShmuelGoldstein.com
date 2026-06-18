@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Messages — Admin</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" href="/assets/favicons/favicon.ico" />
+  <link rel="stylesheet" href="/admin/_shared/admin.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="/js/config.js" defer></script>
+  <script src="/admin/_shared/ui.js" defer></script>
+  <script src="/admin/_shared/auth.js" defer></script>
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <a class="admin-brand" href="/admin/">
+      <span class="monogram">SG</span>
+      <span class="admin-brand-text">Admin <small>shmuelgoldstein.com</small></span>
+    </a>
+    <nav class="admin-nav">
+      <a href="/admin/">Dashboard</a>
+      <a href="/admin/testimonials.html">Testimonials</a>
+      <a href="/admin/shiurim.html">Shiurim</a>
+      <a href="/admin/subscribers.html">Subscribers</a>
+      <a href="/admin/messages.html" class="is-active">Messages</a>
+      <a href="/" target="_blank">View site ↗</a>
+    </nav>
+    <div class="admin-identity">
+      <span class="role">Signed in</span>
+      <span class="who" data-admin-identity>—</span>
+      <button class="admin-btn admin-btn--ghost admin-btn--xs" data-admin-logout type="button">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-head">
+      <div>
+        <h1>Messages</h1>
+        <p class="sub">Contact form submissions from the Let's Talk page.</p>
+      </div>
+    </div>
+
+    <div id="tbl">Loading…</div>
+  </main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+window.adminReady.then(async (ctx) => {
+  if (!ctx) return;
+  const { sb } = ctx;
+  const ui = window.adminUI;
+
+  const fetchAll = async () => {
+    const { data, error } = await sb.from('contact_messages').select('*').order('created_at', { ascending: false });
+    if (error) { ui.toast('Failed to load: ' + error.message, 'err'); return []; }
+    return data || [];
+  };
+
+  let rows = [];
+
+  const statusPill = (s) => {
+    const map = { new: 'admin-pill--warn', read: 'admin-pill--muted', replied: 'admin-pill--ok' };
+    return `<span class="admin-pill ${map[s] || ''}">${ui.escape(s)}</span>`;
+  };
+
+  const render = () => {
+    if (!rows.length) {
+      document.getElementById('tbl').innerHTML = '<div class="empty-state"><h3>No messages yet</h3><p>Contact form submissions will appear here.</p></div>';
+      return;
+    }
+    document.getElementById('tbl').innerHTML = `
+      <table class="admin-table">
+        <thead><tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Subject</th>
+          <th style="width: 130px">Received</th>
+          <th style="width: 100px">Status</th>
+          <th style="width: 180px"></th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => `<tr data-id="${ui.escape(r.id)}">
+            <td>${ui.escape(r.name)}</td>
+            <td>${ui.escape(r.email)}</td>
+            <td>${ui.escape(r.subject || '—')}</td>
+            <td>${ui.fmtDate(r.created_at)}</td>
+            <td>${statusPill(r.status)}</td>
+            <td class="row-actions">
+              <button class="admin-btn admin-btn--ghost admin-btn--xs" data-view>View</button>
+              ${r.status === 'new' ? '<button class="admin-btn admin-btn--ghost admin-btn--xs" data-mark-read>Mark read</button>' : ''}
+              ${r.status !== 'replied' ? '<button class="admin-btn admin-btn--ghost admin-btn--xs" data-mark-replied>Replied</button>' : ''}
+              <button class="admin-btn admin-btn--danger admin-btn--xs" data-del>Delete</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+    document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', (e) => {
+      const id = e.target.closest('tr').dataset.id;
+      const row = rows.find(r => r.id === id);
+      if (!row) return;
+      ui.openModal(row.subject || 'Message', `
+        <p style="margin:0 0 0.5rem;"><strong>${ui.escape(row.name)}</strong> &lt;${ui.escape(row.email)}&gt;</p>
+        <p style="margin:0 0 0.75rem; font-size:0.82rem; color:var(--ink-muted);">${ui.fmtDate(row.created_at)}</p>
+        <p style="white-space:pre-wrap; margin:0; line-height:1.65;">${ui.escape(row.message)}</p>
+      `, { footer: false });
+      // Auto-mark as read
+      if (row.status === 'new') {
+        sb.from('contact_messages').update({ status: 'read' }).eq('id', id).then(() => refresh());
+      }
+    }));
+
+    document.querySelectorAll('[data-mark-read]').forEach(b => b.addEventListener('click', async (e) => {
+      const id = e.target.closest('tr').dataset.id;
+      const { error } = await sb.from('contact_messages').update({ status: 'read' }).eq('id', id);
+      if (error) ui.toast(error.message, 'err'); else { ui.toast('Marked as read.'); refresh(); }
+    }));
+
+    document.querySelectorAll('[data-mark-replied]').forEach(b => b.addEventListener('click', async (e) => {
+      const id = e.target.closest('tr').dataset.id;
+      const { error } = await sb.from('contact_messages').update({ status: 'replied', replied_at: new Date().toISOString() }).eq('id', id);
+      if (error) ui.toast(error.message, 'err'); else { ui.toast('Marked as replied.'); refresh(); }
+    }));
+
+    document.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async (e) => {
+      const id = e.target.closest('tr').dataset.id;
+      const row = rows.find(r => r.id === id);
+      if (!(await ui.confirm(`Delete message from ${row.name}? This removes the record entirely.`))) return;
+      const { error } = await sb.from('contact_messages').delete().eq('id', id);
+      if (error) ui.toast(error.message, 'err'); else { ui.toast('Deleted.'); refresh(); }
+    }));
+  };
+
+  const refresh = async () => { rows = await fetchAll(); render(); };
+  refresh();
+});
+});
+</script>
+</body>
+</html>
