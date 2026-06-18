@@ -2,35 +2,52 @@
   const forms = document.querySelectorAll('form[data-netlify="true"]');
   const isLocal = ['localhost', '127.0.0.1', ''].includes(location.hostname);
 
-  const mirrorToSupabase = async (form, email) => {
+  const mirrorSubscriber = async (email, source) => {
     const sb = typeof window.getSupabase === 'function' ? window.getSupabase() : null;
     if (!sb) return;
-    const source = form.getAttribute('name') === 'newsletter' ? 'footer' : (form.getAttribute('name') || 'site');
     try {
-      // upsert by email so a returning subscriber doesn't 23505
-      await sb.from('subscribers')
-        .upsert({ email, source }, { onConflict: 'email', ignoreDuplicates: true });
-    } catch (_) { /* silent — Netlify Forms is the primary store */ }
+      await sb.from('subscribers').insert({ email, source });
+    } catch (_) { /* silent — duplicate or network error */ }
+  };
+
+  const mirrorContact = async (fields) => {
+    const sb = typeof window.getSupabase === 'function' ? window.getSupabase() : null;
+    if (!sb) return;
+    try {
+      await sb.from('contact_messages').insert(fields);
+    } catch (_) { /* silent */ }
   };
 
   forms.forEach((form) => {
+    const formName = form.getAttribute('name') || '';
+    const isContact = formName === 'contact';
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const button = form.querySelector('button[type="submit"]');
       const msg = form.parentElement.querySelector('.form-msg');
       const honeypot = form.querySelector('input[name="bot-field"]');
-      const emailInput = form.querySelector('input[type="email"]');
-      const email = (emailInput && emailInput.value || '').trim();
 
       if (honeypot && honeypot.value) return;
-      if (!email) return;
 
       const originalText = button ? button.textContent : '';
       if (button) { button.disabled = true; button.textContent = 'Sending…'; }
 
+      // Gather field values
+      const emailInput = form.querySelector('input[type="email"]');
+      const email = (emailInput && emailInput.value || '').trim();
+      if (!email) { if (button) { button.disabled = false; button.textContent = originalText; } return; }
+
       if (isLocal) {
         await new Promise((r) => setTimeout(r, 350));
-        await mirrorToSupabase(form, email);   // Supabase still works locally
+        if (isContact) {
+          const name = (form.querySelector('[name="name"]')?.value || '').trim();
+          const subject = (form.querySelector('[name="subject"]')?.value || '').trim();
+          const message = (form.querySelector('[name="message"]')?.value || '').trim();
+          await mirrorContact({ name, email, subject, message });
+        } else {
+          await mirrorSubscriber(email, 'footer');
+        }
         form.reset();
         if (msg) msg.textContent = 'Saved to Supabase. (Netlify Forms only fires on production.)';
         if (button) { button.disabled = false; button.textContent = originalText; }
@@ -45,13 +62,32 @@
           body: new URLSearchParams(data).toString(),
         });
         if (!res.ok) throw new Error('submission failed');
-        await mirrorToSupabase(form, email);
+
+        if (isContact) {
+          const name = (form.querySelector('[name="name"]')?.value || '').trim();
+          const subject = (form.querySelector('[name="subject"]')?.value || '').trim();
+          const message = (form.querySelector('[name="message"]')?.value || '').trim();
+          await mirrorContact({ name, email, subject, message });
+        } else {
+          await mirrorSubscriber(email, 'footer');
+        }
         form.reset();
-        if (msg) msg.textContent = 'Thanks — you’re on the list.';
+        if (msg) msg.textContent = isContact
+          ? 'Message sent — Rabbi Goldstein will be in touch soon.'
+          : 'Thanks — you\u2019re on the list.';
       } catch (err) {
         // Even if Netlify Forms POST fails, still try the Supabase mirror so we don't lose the lead.
-        await mirrorToSupabase(form, email);
-        if (msg) msg.textContent = 'Saved. (If you don’t hear back soon, email directly.)';
+        if (isContact) {
+          const name = (form.querySelector('[name="name"]')?.value || '').trim();
+          const subject = (form.querySelector('[name="subject"]')?.value || '').trim();
+          const message = (form.querySelector('[name="message"]')?.value || '').trim();
+          await mirrorContact({ name, email, subject, message });
+        } else {
+          await mirrorSubscriber(email, 'footer');
+        }
+        if (msg) msg.textContent = isContact
+          ? 'Sent. If you don\u2019t hear back soon, email directly.'
+          : 'Saved. (If you don\u2019t hear back soon, email directly.)';
       } finally {
         if (button) { button.disabled = false; button.textContent = originalText; }
       }
