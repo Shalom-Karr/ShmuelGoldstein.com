@@ -49,6 +49,7 @@
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', () => {
 window.adminReady.then(async (ctx) => {
   if (!ctx) return;
   const { sb } = ctx;
@@ -126,6 +127,7 @@ window.adminReady.then(async (ctx) => {
 
   const refresh = async () => { rows = await fetchAll(); render(); };
   refresh();
+});
 });
 </script>
 </body>
