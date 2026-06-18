@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Analytics — Admin</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" href="/assets/favicons/favicon.ico" />
+  <link rel="stylesheet" href="/admin/_shared/admin.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="/js/config.js" defer></script>
+  <script src="/admin/_shared/ui.js" defer></script>
+  <script src="/admin/_shared/auth.js" defer></script>
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <a class="admin-brand" href="/admin/">
+      <span class="monogram">SG</span>
+      <span class="admin-brand-text">Admin <small>shmuelgoldstein.com</small></span>
+    </a>
+    <nav class="admin-nav">
+      <a href="/admin/">Dashboard</a>
+      <a href="/admin/testimonials.html">Testimonials</a>
+      <a href="/admin/shiurim.html">Shiurim</a>
+      <a href="/admin/subscribers.html">Subscribers</a>
+      <a href="/admin/messages.html">Messages</a>
+      <a href="/admin/analytics.html" class="is-active">Analytics</a>
+      <a href="/" target="_blank">View site ↗</a>
+    </nav>
+    <div class="admin-identity">
+      <span class="role">Signed in</span>
+      <span class="who" data-admin-identity>—</span>
+      <button class="admin-btn admin-btn--ghost admin-btn--xs" data-admin-logout type="button">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-head">
+      <div>
+        <h1>Analytics</h1>
+        <p class="sub">Page views and engagement over the last 30 days.</p>
+      </div>
+      <div>
+        <select class="admin-select" id="range-select" style="width:auto;">
+          <option value="7">Last 7 days</option>
+          <option value="30" selected>Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="admin-stats" id="stats">
+      <div class="admin-stat"><div class="label">Total views</div><div class="num" id="stat-views">—</div><div class="sub">page loads</div></div>
+      <div class="admin-stat"><div class="label">Unique sessions</div><div class="num" id="stat-uniques">—</div><div class="sub">distinct visitors</div></div>
+      <div class="admin-stat"><div class="label">Avg. time</div><div class="num" id="stat-time">—</div><div class="sub">seconds on page</div></div>
+      <div class="admin-stat"><div class="label">Avg. scroll</div><div class="num" id="stat-scroll">—</div><div class="sub">% of page</div></div>
+    </div>
+
+    <div class="admin-card">
+      <h2>Pages by views</h2>
+      <div id="pages-table">Loading…</div>
+    </div>
+
+    <div class="admin-card">
+      <h2>Recent page views</h2>
+      <div id="recent-table">Loading…</div>
+    </div>
+  </main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+window.adminReady.then(async (ctx) => {
+  if (!ctx) return;
+  const { sb } = ctx;
+  const ui = window.adminUI;
+
+  async function loadAnalytics(days) {
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+
+    // Aggregate stats
+    const { data: views } = await sb.from('page_views')
+      .select('id, session_id, duration_ms, max_scroll_pct')
+      .gte('created_at', since);
+
+    if (views && views.length) {
+      document.getElementById('stat-views').textContent = views.length;
+      const uniqueSessions = new Set(views.map(v => v.session_id));
+      document.getElementById('stat-uniques').textContent = uniqueSessions.size;
+      const avgTime = views.reduce((s, v) => s + (v.duration_ms || 0), 0) / views.length / 1000;
+      document.getElementById('stat-time').textContent = avgTime.toFixed(1);
+      const avgScroll = views.reduce((s, v) => s + (v.max_scroll_pct || 0), 0) / views.length;
+      document.getElementById('stat-scroll').textContent = Math.round(avgScroll) + '%';
+    } else {
+      document.getElementById('stat-views').textContent = '0';
+      document.getElementById('stat-uniques').textContent = '0';
+      document.getElementById('stat-time').textContent = '0';
+      document.getElementById('stat-scroll').textContent = '0%';
+    }
+
+    // Per-page breakdown
+    const { data: pageRows } = await sb.from('page_views')
+      .select('path, session_id, duration_ms, max_scroll_pct')
+      .gte('created_at', since);
+
+    if (pageRows && pageRows.length) {
+      const byPath = {};
+      pageRows.forEach(r => {
+        if (!byPath[r.path]) byPath[r.path] = { views: 0, sessions: new Set(), duration: 0, scroll: 0 };
+        byPath[r.path].views++;
+        byPath[r.path].sessions.add(r.session_id);
+        byPath[r.path].duration += (r.duration_ms || 0);
+        byPath[r.path].scroll += (r.max_scroll_pct || 0);
+      });
+
+      const sorted = Object.entries(byPath).sort((a, b) => b[1].views - a[1].views);
+      document.getElementById('pages-table').innerHTML = `
+        <table class="admin-table">
+          <thead><tr><th>Path</th><th>Views</th><th>Uniques</th><th>Avg time (s)</th><th>Avg scroll</th></tr></thead>
+          <tbody>${sorted.map(([path, d]) => `<tr>
+            <td>${ui.escape(path)}</td>
+            <td>${d.views}</td>
+            <td>${d.sessions.size}</td>
+            <td>${(d.duration / d.views / 1000).toFixed(1)}</td>
+            <td>${Math.round(d.scroll / d.views)}%</td>
+          </tr>`).join('')}</tbody>
+        </table>`;
+    } else {
+      document.getElementById('pages-table').innerHTML = '<div class="empty-state"><h3>No data yet</h3><p>Analytics will appear once visitors start browsing the site.</p></div>';
+    }
+
+    // Recent individual views
+    const { data: recent } = await sb.from('page_views')
+      .select('path, referrer, duration_ms, max_scroll_pct, created_at')
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (recent && recent.length) {
+      document.getElementById('recent-table').innerHTML = `
+        <table class="admin-table">
+          <thead><tr><th>Path</th><th>Referrer</th><th>Duration</th><th>Scroll</th><th>When</th></tr></thead>
+          <tbody>${recent.map(r => `<tr>
+            <td>${ui.escape(r.path)}</td>
+            <td>${ui.escape(r.referrer ? new URL(r.referrer).hostname : '—')}</td>
+            <td>${r.duration_ms ? (r.duration_ms / 1000).toFixed(1) + 's' : '—'}</td>
+            <td>${r.max_scroll_pct != null ? r.max_scroll_pct + '%' : '—'}</td>
+            <td>${ui.fmtDate(r.created_at)}</td>
+          </tr>`).join('')}</tbody>
+        </table>`;
+    } else {
+      document.getElementById('recent-table').innerHTML = '<div class="empty-state"><h3>No views yet</h3></div>';
+    }
+  }
+
+  const rangeSelect = document.getElementById('range-select');
+  rangeSelect.addEventListener('change', () => loadAnalytics(Number(rangeSelect.value)));
+  loadAnalytics(30);
+});
+});
+</script>
+</body>
+</html>
