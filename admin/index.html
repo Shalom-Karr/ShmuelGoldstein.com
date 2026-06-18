@@ -63,6 +63,7 @@
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', () => {
 window.adminReady.then(async (ctx) => {
   if (!ctx) return;
   const { sb } = ctx;
@@ -99,6 +100,7 @@ window.adminReady.then(async (ctx) => {
           <td>${t.featured ? '<span class="admin-pill">Featured</span>' : ''} ${t.published ? '<span class="admin-pill admin-pill--ok">Published</span>' : '<span class="admin-pill admin-pill--muted">Draft</span>'}</td>
         </tr>`).join('')
       }</tbody></table>`;
+});
 });
 </script>
 </body>
