@@ -5,17 +5,17 @@
   const mirrorSubscriber = async (email, source) => {
     const sb = typeof window.getSupabase === 'function' ? window.getSupabase() : null;
     if (!sb) return;
-    try {
-      await sb.from('subscribers').insert({ email, source });
-    } catch (_) { /* silent — duplicate or network error */ }
+    const { error } = await sb.from('subscribers').insert({ email, source });
+    if (error && error.code !== '23505') { // ignore unique violation
+      console.warn('[subscriber mirror]', error.message);
+    }
   };
 
   const mirrorContact = async (fields) => {
     const sb = typeof window.getSupabase === 'function' ? window.getSupabase() : null;
     if (!sb) return;
-    try {
-      await sb.from('contact_messages').insert(fields);
-    } catch (_) { /* silent */ }
+    const { error } = await sb.from('contact_messages').insert(fields);
+    if (error) console.warn('[contact mirror]', error.message);
   };
 
   forms.forEach((form) => {
