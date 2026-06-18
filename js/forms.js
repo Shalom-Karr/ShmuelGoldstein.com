@@ -2,20 +2,33 @@
   const forms = document.querySelectorAll('form[data-netlify="true"]');
   const isLocal = ['localhost', '127.0.0.1', ''].includes(location.hostname);
 
+  const waitForSupabase = async (timeoutMs = 4000) => {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const sb = typeof window.getSupabase === 'function' ? window.getSupabase() : null;
+      if (sb) return sb;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return null;
+  };
+
   const mirrorSubscriber = async (email, source) => {
-    const sb = typeof window.getSupabase === 'function' ? window.getSupabase() : null;
-    if (!sb) return;
+    const sb = await waitForSupabase();
+    if (!sb) { console.warn('[subscriber mirror] Supabase client unavailable'); return false; }
     const { error } = await sb.from('subscribers').insert({ email, source });
     if (error && error.code !== '23505') { // ignore unique violation
-      console.warn('[subscriber mirror]', error.message);
+      console.warn('[subscriber mirror]', error.code, error.message);
+      return false;
     }
+    return true;
   };
 
   const mirrorContact = async (fields) => {
-    const sb = typeof window.getSupabase === 'function' ? window.getSupabase() : null;
-    if (!sb) return;
+    const sb = await waitForSupabase();
+    if (!sb) { console.warn('[contact mirror] Supabase client unavailable'); return false; }
     const { error } = await sb.from('contact_messages').insert(fields);
-    if (error) console.warn('[contact mirror]', error.message);
+    if (error) { console.warn('[contact mirror]', error.code, error.message); return false; }
+    return true;
   };
 
   forms.forEach((form) => {
@@ -38,18 +51,23 @@
       const email = (emailInput && emailInput.value || '').trim();
       if (!email) { if (button) { button.disabled = false; button.textContent = originalText; } return; }
 
+      // Mirror to Supabase FIRST so a slow/failing Netlify Forms POST
+      // (or a same-tab navigation) can't lose the lead.
+      let mirrored = false;
+      if (isContact) {
+        const name = (form.querySelector('[name="name"]')?.value || '').trim();
+        const subject = (form.querySelector('[name="subject"]')?.value || '').trim();
+        const message = (form.querySelector('[name="message"]')?.value || '').trim();
+        mirrored = await mirrorContact({ name, email, subject, message });
+      } else {
+        mirrored = await mirrorSubscriber(email, 'footer');
+      }
+
       if (isLocal) {
-        await new Promise((r) => setTimeout(r, 350));
-        if (isContact) {
-          const name = (form.querySelector('[name="name"]')?.value || '').trim();
-          const subject = (form.querySelector('[name="subject"]')?.value || '').trim();
-          const message = (form.querySelector('[name="message"]')?.value || '').trim();
-          await mirrorContact({ name, email, subject, message });
-        } else {
-          await mirrorSubscriber(email, 'footer');
-        }
         form.reset();
-        if (msg) msg.textContent = 'Saved to Supabase. (Netlify Forms only fires on production.)';
+        if (msg) msg.textContent = mirrored
+          ? 'Saved to Supabase. (Netlify Forms only fires on production.)'
+          : 'Could not save — check the browser console.';
         if (button) { button.disabled = false; button.textContent = originalText; }
         return;
       }
@@ -62,32 +80,16 @@
           body: new URLSearchParams(data).toString(),
         });
         if (!res.ok) throw new Error('submission failed');
-
-        if (isContact) {
-          const name = (form.querySelector('[name="name"]')?.value || '').trim();
-          const subject = (form.querySelector('[name="subject"]')?.value || '').trim();
-          const message = (form.querySelector('[name="message"]')?.value || '').trim();
-          await mirrorContact({ name, email, subject, message });
-        } else {
-          await mirrorSubscriber(email, 'footer');
-        }
         form.reset();
         if (msg) msg.textContent = isContact
           ? 'Message sent — Rabbi Goldstein will be in touch soon.'
-          : 'Thanks — you\u2019re on the list.';
+          : 'Thanks — you’re on the list.';
       } catch (err) {
-        // Even if Netlify Forms POST fails, still try the Supabase mirror so we don't lose the lead.
-        if (isContact) {
-          const name = (form.querySelector('[name="name"]')?.value || '').trim();
-          const subject = (form.querySelector('[name="subject"]')?.value || '').trim();
-          const message = (form.querySelector('[name="message"]')?.value || '').trim();
-          await mirrorContact({ name, email, subject, message });
-        } else {
-          await mirrorSubscriber(email, 'footer');
-        }
-        if (msg) msg.textContent = isContact
-          ? 'Sent. If you don\u2019t hear back soon, email directly.'
-          : 'Saved. (If you don\u2019t hear back soon, email directly.)';
+        if (msg) msg.textContent = mirrored
+          ? (isContact
+              ? 'Sent. If you don’t hear back soon, email directly.'
+              : 'Saved. (If you don’t hear back soon, email directly.)')
+          : 'Could not save — please try again or email directly.';
       } finally {
         if (button) { button.disabled = false; button.textContent = originalText; }
       }
