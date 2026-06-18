@@ -1,6 +1,5 @@
 (function () {
   const forms = document.querySelectorAll('form[data-netlify="true"]');
-  const isLocal = ['localhost', '127.0.0.1', ''].includes(location.hostname);
 
   const waitForSupabase = async (timeoutMs = 4000) => {
     const start = Date.now();
@@ -12,23 +11,32 @@
     return null;
   };
 
-  const mirrorSubscriber = async (email, source) => {
-    const sb = await waitForSupabase();
-    if (!sb) { console.warn('[subscriber mirror] Supabase client unavailable'); return false; }
-    const { error } = await sb.from('subscribers').insert({ email, source });
-    if (error && error.code !== '23505') { // ignore unique violation
-      console.warn('[subscriber mirror]', error.code, error.message);
-      return false;
-    }
-    return true;
-  };
-
+  // Contact form still goes via supabase-js (lower volume, JS path is fine).
   const mirrorContact = async (fields) => {
     const sb = await waitForSupabase();
     if (!sb) { console.warn('[contact mirror] Supabase client unavailable'); return false; }
     const { error } = await sb.from('contact_messages').insert(fields);
     if (error) { console.warn('[contact mirror]', error.code, error.message); return false; }
     return true;
+  };
+
+  // Newsletter goes through a Netlify Function so RLS, CSP, tracking-prevention,
+  // and supabase-js UMD load issues on the client can't drop signups.
+  const subscribeViaFunction = async (email, source) => {
+    try {
+      const res = await fetch('/.netlify/functions/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source }),
+      });
+      if (res.ok) return true;
+      const text = await res.text().catch(() => '');
+      console.warn('[subscribe]', res.status, text);
+      return false;
+    } catch (err) {
+      console.warn('[subscribe] fetch failed', err);
+      return false;
+    }
   };
 
   forms.forEach((form) => {
@@ -46,53 +54,29 @@
       const originalText = button ? button.textContent : '';
       if (button) { button.disabled = true; button.textContent = 'Sending…'; }
 
-      // Gather field values
       const emailInput = form.querySelector('input[type="email"]');
       const email = (emailInput && emailInput.value || '').trim();
       if (!email) { if (button) { button.disabled = false; button.textContent = originalText; } return; }
 
-      // Mirror to Supabase FIRST so a slow/failing Netlify Forms POST
-      // (or a same-tab navigation) can't lose the lead.
-      let mirrored = false;
+      let saved = false;
       if (isContact) {
         const name = (form.querySelector('[name="name"]')?.value || '').trim();
         const subject = (form.querySelector('[name="subject"]')?.value || '').trim();
         const message = (form.querySelector('[name="message"]')?.value || '').trim();
-        mirrored = await mirrorContact({ name, email, subject, message });
+        saved = await mirrorContact({ name, email, subject, message });
       } else {
-        mirrored = await mirrorSubscriber(email, 'footer');
+        saved = await subscribeViaFunction(email, 'footer');
       }
 
-      if (isLocal) {
-        form.reset();
-        if (msg) msg.textContent = mirrored
-          ? 'Saved to Supabase. (Netlify Forms only fires on production.)'
-          : 'Could not save — check the browser console.';
-        if (button) { button.disabled = false; button.textContent = originalText; }
-        return;
-      }
-
-      try {
-        const data = new FormData(form);
-        const res = await fetch('/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams(data).toString(),
-        });
-        if (!res.ok) throw new Error('submission failed');
+      if (saved) {
         form.reset();
         if (msg) msg.textContent = isContact
           ? 'Message sent — Rabbi Goldstein will be in touch soon.'
           : 'Thanks — you’re on the list.';
-      } catch (err) {
-        if (msg) msg.textContent = mirrored
-          ? (isContact
-              ? 'Sent. If you don’t hear back soon, email directly.'
-              : 'Saved. (If you don’t hear back soon, email directly.)')
-          : 'Could not save — please try again or email directly.';
-      } finally {
-        if (button) { button.disabled = false; button.textContent = originalText; }
+      } else {
+        if (msg) msg.textContent = 'Could not save — please try again or email directly.';
       }
+      if (button) { button.disabled = false; button.textContent = originalText; }
     });
   });
 })();

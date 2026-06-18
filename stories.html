@@ -147,7 +147,7 @@
       <div class="footer-col">
         <h3>Stay in touch</h3>
         <p>One short email a month — Torah-rooted tools you can put to work this week. No noise, easy unsubscribe.</p>
-        <form class="email-capture" name="newsletter" method="POST" action="/thank-you.html" data-netlify="true" data-netlify-honeypot="bot-field">
+        <form class="email-capture" name="newsletter" method="POST" action="/.netlify/functions/subscribe" data-netlify="true" data-netlify-honeypot="bot-field">
           <input type="hidden" name="form-name" value="newsletter" />
           <p class="hp" aria-hidden="true"><label>Leave this empty: <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
           <input type="email" name="email" placeholder="your@email.com" required aria-label="Email address" />
