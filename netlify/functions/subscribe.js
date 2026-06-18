@@ -55,13 +55,35 @@ exports.handler = async (event) => {
     body: JSON.stringify({ email, source }),
   });
 
-  if (res.status === 201 || res.status === 200 || res.status === 409) {
-    return reply(wantsHtml, 200, { ok: true, duplicate: res.status === 409 });
+  if (res.status !== 201 && res.status !== 200 && res.status !== 409) {
+    const text = await res.text();
+    console.error('Supabase insert failed', res.status, text);
+    return reply(wantsHtml, 502, { error: 'Upstream insert failed' });
+  }
+  const duplicate = res.status === 409;
+
+  // Forward to Netlify Forms so the email-notification rule fires too.
+  // Best-effort: a failure here must NOT block the success reply, because
+  // the Supabase row already landed.
+  const host = event.headers.host || event.headers.Host;
+  if (host) {
+    const formBody = new URLSearchParams({
+      'form-name': 'newsletter',
+      email,
+      source,
+    }).toString();
+    try {
+      await fetch(`https://${host}/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formBody,
+      });
+    } catch (err) {
+      console.warn('Netlify Forms forward failed', err && err.message);
+    }
   }
 
-  const text = await res.text();
-  console.error('Supabase insert failed', res.status, text);
-  return reply(wantsHtml, 502, { error: 'Upstream insert failed' });
+  return reply(wantsHtml, 200, { ok: true, duplicate });
 };
 
 const cors = () => ({
