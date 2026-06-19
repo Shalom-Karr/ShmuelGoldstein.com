@@ -132,6 +132,19 @@ window.adminReady.then(async (ctx) => {
           <input id="source_id" class="admin-input" value="${ui.escape(row?.source_id || row?.storage_path || '')}" placeholder="YouTube ID, Vimeo ID, or storage path" />
         </div>
       </div>
+      <div class="admin-field" id="upload-field" hidden>
+        <label for="file">Upload file (audio/video)</label>
+        <input id="file" class="admin-input" type="file" accept="audio/*,video/*" />
+        <div id="upload-info" style="margin-top:6px;font-size:12px;color:var(--ink-muted);">
+          Max 500MB. Allowed: mp3, m4a, wav, mp4, mov, webm. The file is uploaded to the <code>shiurim</code> bucket and its path is set on save.
+        </div>
+        <div id="upload-progress" style="margin-top:8px;display:none;">
+          <div style="height:6px;background:#e6dccb;border-radius:3px;overflow:hidden;">
+            <div id="upload-bar" style="height:100%;width:0%;background:#b85c1f;transition:width 120ms linear;"></div>
+          </div>
+          <div id="upload-status" style="font-size:12px;margin-top:4px;color:var(--ink-muted);"></div>
+        </div>
+      </div>
       <div class="admin-grid-2">
         <div class="admin-field">
           <label for="topic">Topic</label>
@@ -158,38 +171,129 @@ window.adminReady.then(async (ctx) => {
         <label class="admin-checkbox"><input type="checkbox" id="published" ${row?.published ?? true ? 'checked' : ''}/><span>Published</span></label>
       </div>`;
     const m = ui.openModal(isNew ? 'New shiur' : 'Edit shiur', body, { submitLabel: 'Save' });
+
+    // Show/hide the file-upload block based on the source.
+    const sourceSel  = m.body.querySelector('#source');
+    const uploadField = m.body.querySelector('#upload-field');
+    const sourceIdInput = m.body.querySelector('#source_id');
+    const syncUploadVisibility = () => { uploadField.hidden = sourceSel.value !== 'supabase'; };
+    sourceSel.addEventListener('change', syncUploadVisibility);
+    syncUploadVisibility();
+
+    const ALLOWED_EXTS = ['mp3','m4a','wav','mp4','mov','webm','m4v','ogg','aac'];
+    const MAX_BYTES = 500 * 1024 * 1024;
+
+    const fileInput = m.body.querySelector('#file');
+    const progressBox = m.body.querySelector('#upload-progress');
+    const progressBar = m.body.querySelector('#upload-bar');
+    const progressTxt = m.body.querySelector('#upload-status');
+
+    const uploadIfNeeded = async () => {
+      if (sourceSel.value !== 'supabase') return { ok: true, path: null };
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        // No file picked — fall back to the path typed in (or existing one).
+        return { ok: true, path: sourceIdInput.value.trim() || null };
+      }
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      if (!ALLOWED_EXTS.includes(ext)) {
+        ui.toast('File type not allowed. Use ' + ALLOWED_EXTS.join(', '), 'err');
+        return { ok: false };
+      }
+      if (file.size > MAX_BYTES) {
+        ui.toast('File too large (max 500MB).', 'err');
+        return { ok: false };
+      }
+
+      const titleVal = (m.body.querySelector('#title').value || '').trim() || 'shiur';
+      const slugBase = m.body.querySelector('#slug').value.trim() || slugify(titleVal);
+      const stamp = new Date().toISOString().slice(0, 10);
+      const rand = Math.random().toString(36).slice(2, 8);
+      const path = `uploads/${stamp.slice(0,7)}/${slugBase}-${rand}.${ext}`;
+
+      progressBox.style.display = 'block';
+      progressBar.style.width = '0%';
+      progressTxt.textContent = `Uploading ${file.name} (${fmtBytes(file.size)})…`;
+
+      // supabase-js's upload doesn't expose progress events on web, so we tick
+      // an indeterminate visual cue instead of fake percentage.
+      let tickPct = 0;
+      const tick = setInterval(() => {
+        tickPct = Math.min(92, tickPct + 4);
+        progressBar.style.width = tickPct + '%';
+      }, 250);
+
+      const { error } = await sb.storage
+        .from('shiurim')
+        .upload(path, file, {
+          cacheControl: '31536000',
+          upsert: false,
+          contentType: file.type || undefined,
+        });
+
+      clearInterval(tick);
+      if (error) {
+        progressTxt.textContent = 'Upload failed: ' + error.message;
+        ui.toast('Upload failed: ' + error.message, 'err');
+        return { ok: false };
+      }
+      progressBar.style.width = '100%';
+      progressTxt.textContent = `Uploaded → ${path}`;
+      sourceIdInput.value = path;
+      return { ok: true, path };
+    };
+
     m.submit.addEventListener('click', async () => {
       const title = m.body.querySelector('#title').value.trim();
-      const source = m.body.querySelector('#source').value;
-      const sourceIdRaw = m.body.querySelector('#source_id').value.trim();
-      const tagsStr = m.body.querySelector('#tags').value.trim();
-      const dur = parseInt(m.body.querySelector('#duration_seconds').value, 10);
+      if (!title) { ui.toast('Title is required.', 'err'); return; }
 
-      const payload = {
-        title,
-        slug: m.body.querySelector('#slug').value.trim() || slugify(title),
-        description: m.body.querySelector('#description').value.trim() || null,
-        source,
-        source_id: source === 'supabase' ? null : sourceIdRaw || null,
-        storage_path: source === 'supabase' ? sourceIdRaw || null : null,
-        source_url: source === 'youtube' && sourceIdRaw ? `https://www.youtube.com/watch?v=${sourceIdRaw}` :
-                    source === 'vimeo' && sourceIdRaw   ? `https://vimeo.com/${sourceIdRaw}` : null,
-        topic: m.body.querySelector('#topic').value || null,
-        recorded_at: m.body.querySelector('#recorded_at').value || null,
-        duration_seconds: isNaN(dur) ? null : dur,
-        tags: tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [],
-        published: m.body.querySelector('#published').checked,
-      };
-      if (!payload.title) { ui.toast('Title is required.', 'err'); return; }
       m.submit.disabled = true;
-      const q = isNew
-        ? sb.from('shiurim').insert(payload)
-        : sb.from('shiurim').update(payload).eq('id', row.id);
-      const { error } = await q;
-      m.submit.disabled = false;
-      if (error) ui.toast(error.message, 'err');
-      else { ui.toast(isNew ? 'Created.' : 'Saved.'); m.close(); refresh(); }
+      try {
+        const up = await uploadIfNeeded();
+        if (!up.ok) { m.submit.disabled = false; return; }
+
+        const source = sourceSel.value;
+        const sourceIdRaw = source === 'supabase'
+          ? (up.path || sourceIdInput.value.trim())
+          : sourceIdInput.value.trim();
+        const tagsStr = m.body.querySelector('#tags').value.trim();
+        const dur = parseInt(m.body.querySelector('#duration_seconds').value, 10);
+
+        const payload = {
+          title,
+          slug: m.body.querySelector('#slug').value.trim() || slugify(title),
+          description: m.body.querySelector('#description').value.trim() || null,
+          source,
+          source_id: source === 'supabase' ? null : sourceIdRaw || null,
+          storage_path: source === 'supabase' ? sourceIdRaw || null : null,
+          source_url: source === 'youtube' && sourceIdRaw ? `https://www.youtube.com/watch?v=${sourceIdRaw}` :
+                      source === 'vimeo' && sourceIdRaw   ? `https://vimeo.com/${sourceIdRaw}` : null,
+          topic: m.body.querySelector('#topic').value || null,
+          recorded_at: m.body.querySelector('#recorded_at').value || null,
+          duration_seconds: isNaN(dur) ? null : dur,
+          tags: tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [],
+          published: m.body.querySelector('#published').checked,
+        };
+
+        const q = isNew
+          ? sb.from('shiurim').insert(payload)
+          : sb.from('shiurim').update(payload).eq('id', row.id);
+        const { error } = await q;
+        if (error) { ui.toast(error.message, 'err'); return; }
+        ui.toast(isNew ? 'Created.' : 'Saved.');
+        m.close();
+        refresh();
+      } finally {
+        m.submit.disabled = false;
+      }
     });
+  };
+
+  const fmtBytes = (n) => {
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    if (n < 1024 * 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + ' MB';
+    return (n / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
   };
 
   document.getElementById('new-btn').addEventListener('click', () => openForm());
