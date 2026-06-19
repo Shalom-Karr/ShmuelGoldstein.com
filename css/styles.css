@@ -1599,10 +1599,11 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 
 .values-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 3.5rem;
 }
 
+@media (max-width: 1000px) { .values-grid { grid-template-columns: 1fr 1fr; gap: 3rem; } }
 @media (max-width: 760px) { .values-grid { grid-template-columns: 1fr; gap: 2.5rem; } }
 
 .value-card {
