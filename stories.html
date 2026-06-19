@@ -166,11 +166,17 @@
       <div class="quote-card is-featured" data-reveal>
         <span class="glyph">“</span>
         <blockquote>
-          <p>After 6 years of marriage, I was convinced that we needed marriage counseling. I was also convinced that it was my husband who needed therapy more than I did, but he refused to go. So week after week I began seeing a very well known and referred to psychologist. And week after week I vented my problems and felt more justifiably correct with each session. I believed that I was fine and he needed the help. However, since he wouldn't go with me, I had to go alone. Nothing really changed (except for the size of my wallet). After 4 years of therapy, I had had enough! I had learned 2 things: how to vent very well and how to hide from my husband almost everything that he didn't agree with.</p>
-          <p>So when a friend introduced me to the idea of having a life coach, I wondered if I really needed to pay more money to vent. The answer was probably not, but I eventually decided to give it a try. It's a good thing I did, because the result was life changing.</p>
-          <p>Two and a half years after starting, I can honestly say I am a different person. I have now learned to use incredible tools that can help me through the toughest of situations when dealing with those around me, most importantly my husband and children. The rabbi has taught me about a tool called <em>elegance</em>. As a result of my elegance, arguments have a different flavor. They are frequently one-sided (which doesn't really qualify as even an argument), much quicker, and are much more seldom. I don't engage anymore in crazy fights. It's not elegant. When I feel threatened by my husband, I learned how to get curious and how to interview him. These two tools help me to understand his way of thinking, even if I feel the opposite way as he does. It also allows for a new openness between us. He feels I care more, and that is a reflection of the truth. I also learned how to radiate my happiness to him and my children and the difference between influencing him and informing him. These are all very powerful and extremely effective ways that have completely changed the way I am able to deal with the tough challenges that life throws my way.</p>
-          <p>But most of all, I have learned how to believe in myself. I carry with me a new confidence that I didn't have before and I make decisions now that I couldn't have made before. I don't hide life from my husband simply because I have nothing to hide. My new strengths and tools provide me with a vastly new outlook each and every day. Challenges still arise, and so do setbacks. They are simply a part of life. However, my victories are many. Each success gives me more reassurance that with my coach's help, I am finally on the right track to being the best wife and mother possible.</p>
+          <p class="quote-lede"><strong>Two and a half years after starting, I can honestly say I am a different person.</strong> After 6 years of marriage, I was convinced that we needed marriage counseling—and that my husband needed therapy more than I did. He refused, so week after week I saw a well-known psychologist alone. I learned to vent very well, and to hide from my husband almost everything he didn't agree with. After 4 years, I'd had enough.</p>
+          <div class="quote-more" id="story-more-1" hidden>
+            <p>So when a friend introduced me to the idea of having a life coach, I wondered if I really needed to pay more money to vent. The answer was probably not, but I eventually decided to give it a try. It's a good thing I did, because the result was life changing.</p>
+            <p>I have now learned to use incredible tools that can help me through the toughest of situations when dealing with those around me, most importantly my husband and children. The rabbi has taught me about a tool called <em>elegance</em>. As a result of my elegance, arguments have a different flavor. They are frequently one-sided (which doesn't really qualify as even an argument), much quicker, and are much more seldom. I don't engage anymore in crazy fights. It's not elegant. When I feel threatened by my husband, I learned how to get curious and how to interview him. These two tools help me to understand his way of thinking, even if I feel the opposite way as he does. It also allows for a new openness between us. He feels I care more, and that is a reflection of the truth. I also learned how to radiate my happiness to him and my children and the difference between influencing him and informing him.</p>
+            <p>But most of all, I have learned how to believe in myself. I carry with me a new confidence that I didn't have before and I make decisions now that I couldn't have made before. I don't hide life from my husband simply because I have nothing to hide. Challenges still arise, and so do setbacks. They are simply a part of life. However, my victories are many. Each success gives me more reassurance that with my coach's help, I am finally on the right track to being the best wife and mother possible.</p>
+          </div>
         </blockquote>
+        <button type="button" class="quote-toggle" aria-expanded="false" aria-controls="story-more-1">
+          <span class="quote-toggle-label">Read full story</span>
+          <svg class="quote-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
         <cite>Relationship Coaching Client · Wife &amp; Mother</cite>
       </div>
 
@@ -251,5 +257,20 @@
 <script src="js/analytics.js" defer></script>
 <script src="js/forms.js" defer></script>
 <script src="js/stories.js" defer></script>
+<script>
+  document.querySelectorAll('.quote-toggle').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.getAttribute('aria-controls');
+      var panel = id && document.getElementById(id);
+      if (!panel) return;
+      var expanded = btn.getAttribute('aria-expanded') === 'true';
+      var next = !expanded;
+      btn.setAttribute('aria-expanded', next ? 'true' : 'false');
+      panel.hidden = !next;
+      var label = btn.querySelector('.quote-toggle-label');
+      if (label) label.textContent = next ? 'Show less' : 'Read full story';
+    });
+  });
+</script>
 </body>
 </html>

@@ -944,6 +944,49 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
   opacity: 0.6;
 }
 
+/* Featured (long-form) quote card: lede + expand/collapse */
+.quote-card-featured blockquote { margin-bottom: 1.25rem; }
+.quote-card-featured .quote-lede { margin: 0; }
+.quote-card-featured .quote-lede strong {
+  color: var(--gold-leaf);
+  font-weight: 500;
+}
+.quote-card-featured .quote-more { margin-top: 1.1rem; }
+.quote-card-featured .quote-more p { margin: 0 0 1rem; }
+.quote-card-featured .quote-more p:last-child { margin-bottom: 0; }
+.quote-card-featured blockquote p { margin: 0; }
+
+.quote-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+  padding: 0.55rem 1.1rem;
+  background: transparent;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 999px;
+  color: var(--gold-leaf);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+.quote-toggle:hover,
+.quote-toggle:focus-visible {
+  background: rgba(212, 175, 55, 0.08);
+  border-color: var(--gold-leaf);
+  color: var(--terracotta-soft);
+  outline: none;
+}
+.quote-toggle-icon {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.3s ease;
+}
+.quote-toggle[aria-expanded="true"] .quote-toggle-icon { transform: rotate(180deg); }
+
 .quote-stack { display: grid; gap: 1.5rem; }
 @media (min-width: 880px) { .quote-stack.cols-2 { grid-template-columns: 1fr 1fr; } }
 
