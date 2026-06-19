@@ -104,17 +104,42 @@
   const modal = document.getElementById('shiur-modal');
   const stage = document.getElementById('shiur-stage');
   const closeBtn = modal && modal.querySelector('.shiur-modal-close');
+  const modalTitle = document.getElementById('shiur-modal-title');
+  let lastFocused = null;
+
+  const FOCUSABLE_SEL = 'a[href], button:not([disabled]), textarea, input, select, iframe, video, [tabindex]:not([tabindex="-1"])';
+
+  const getFocusable = () => {
+    if (!modal) return [];
+    return Array.from(modal.querySelectorAll(FOCUSABLE_SEL))
+      .filter((el) => !el.hasAttribute('disabled') && el.offsetParent !== null);
+  };
+
+  const trapTab = (e) => {
+    if (e.key !== 'Tab' || !modal || !modal.classList.contains('is-open')) return;
+    const f = getFocusable();
+    if (!f.length) { e.preventDefault(); if (closeBtn) closeBtn.focus(); return; }
+    const first = f[0];
+    const last = f[f.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey) {
+      if (active === first || !modal.contains(active)) { e.preventDefault(); last.focus(); }
+    } else {
+      if (active === last || !modal.contains(active)) { e.preventDefault(); first.focus(); }
+    }
+  };
 
   const open = (card) => {
     const source = card.dataset.source;
     const id = card.dataset.sourceId;
     const poster = card.dataset.poster || '';
+    const titleText = (card.querySelector('h3') && card.querySelector('h3').textContent) || 'Shiur';
     let html = '';
 
     if (source === 'youtube') {
-      html = `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1&rel=0&modestbranding=1" title="${card.querySelector('h3').textContent}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+      html = `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1&rel=0&modestbranding=1" title="${titleText}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
     } else if (source === 'vimeo') {
-      html = `<iframe src="https://player.vimeo.com/video/${id}?autoplay=1&title=0&byline=0" title="${card.querySelector('h3').textContent}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+      html = `<iframe src="https://player.vimeo.com/video/${id}?autoplay=1&title=0&byline=0" title="${titleText}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
     } else if (source === 'supabase') {
       const src = id.startsWith('http') ? id : (SUPABASE_PUBLIC_BASE ? `${SUPABASE_PUBLIC_BASE}/${id}` : id);
       const posterAttr = poster ? ` poster="${poster}"` : '';
@@ -123,10 +148,15 @@
       html = `<p style="color:var(--sand);padding:2rem;text-align:center;">Unknown video source.</p>`;
     }
 
+    lastFocused = document.activeElement;
+    if (modalTitle) modalTitle.textContent = titleText;
     stage.innerHTML = html;
     modal.classList.add('is-open');
     modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
+    if (closeBtn) {
+      try { closeBtn.focus(); } catch (_) {}
+    }
   };
 
   const close = () => {
@@ -135,6 +165,10 @@
     modal.setAttribute('aria-hidden', 'true');
     stage.innerHTML = '';
     document.body.style.overflow = '';
+    if (lastFocused && typeof lastFocused.focus === 'function') {
+      try { lastFocused.focus(); } catch (_) {}
+    }
+    lastFocused = null;
   };
 
   const wireCards = () => {
@@ -149,7 +183,11 @@
 
   if (closeBtn) closeBtn.addEventListener('click', close);
   if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  document.addEventListener('keydown', (e) => {
+    if (!modal || !modal.classList.contains('is-open')) return;
+    if (e.key === 'Escape') { close(); return; }
+    trapTab(e);
+  });
 
   wireFilters();
   wireCards();
