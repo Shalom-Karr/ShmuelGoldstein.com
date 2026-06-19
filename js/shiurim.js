@@ -115,8 +115,12 @@
     filters = document.querySelectorAll('.shiurim-filter');
     filters.forEach((btn) => {
       btn.addEventListener('click', () => {
-        filters.forEach((b) => b.classList.remove('is-active'));
+        filters.forEach((b) => {
+          b.classList.remove('is-active');
+          b.setAttribute('aria-pressed', 'false');
+        });
         btn.classList.add('is-active');
+        btn.setAttribute('aria-pressed', 'true');
         applyFilter(btn.dataset.topic, activeQuery);
       });
     });

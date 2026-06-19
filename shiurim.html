@@ -105,12 +105,12 @@
 <section class="shiurim-section">
   <div class="container">
     <div class="shiurim-toolbar" data-reveal>
-      <div class="shiurim-filters" role="tablist" aria-label="Filter shiurim by topic">
-        <button class="shiurim-filter is-active" data-topic="all">All</button>
-        <button class="shiurim-filter" data-topic="parsha">Parsha</button>
-        <button class="shiurim-filter" data-topic="tefila">Tefila</button>
-        <button class="shiurim-filter" data-topic="halacha">Halacha</button>
-        <button class="shiurim-filter" data-topic="mussar">Mussar</button>
+      <div class="shiurim-filters" role="group" aria-label="Filter shiurim by topic">
+        <button class="shiurim-filter is-active" data-topic="all" aria-pressed="true">All</button>
+        <button class="shiurim-filter" data-topic="parsha" aria-pressed="false">Parsha</button>
+        <button class="shiurim-filter" data-topic="tefila" aria-pressed="false">Tefila</button>
+        <button class="shiurim-filter" data-topic="halacha" aria-pressed="false">Halacha</button>
+        <button class="shiurim-filter" data-topic="mussar" aria-pressed="false">Mussar</button>
       </div>
       <div class="shiurim-search">
         <svg class="shiurim-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -190,7 +190,7 @@
 
     </div>
 
-    <p class="shiurim-empty" hidden>No shiurim yet for that topic — check back soon.</p>
+    <p class="shiurim-empty" hidden aria-live="polite">No shiurim yet for that topic — check back soon.</p>
 
     <div class="shiurim-load-more-wrap">
       <button type="button" class="btn btn-ghost" id="shiurim-load-more" hidden>Load more shiurim</button>
