@@ -2647,6 +2647,54 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 .cta-banner-actions { display: flex; justify-content: flex-end; }
 @media (max-width: 768px) { .cta-banner-actions { justify-content: flex-start; } }
 
+/* ===== FACT STRIP — horizontal logistics row ===== */
+.fact-strip {
+  margin-top: 3.5rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--line-fine);
+  border-bottom: 1px solid var(--line-fine);
+}
+
+.fact-strip .fact {
+  padding: 1.5rem 1.75rem;
+  border-left: 1px solid var(--line-fine);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.fact-strip .fact:first-child { border-left: 0; }
+
+.fact-strip .fact-label {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+}
+
+.fact-strip .fact-value {
+  font-family: var(--serif-display);
+  font-size: clamp(1.1rem, 1.6vw, 1.35rem);
+  line-height: 1.25;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 760px) {
+  .fact-strip {
+    grid-template-columns: 1fr;
+  }
+  .fact-strip .fact {
+    border-left: 0;
+    border-top: 1px solid var(--line-fine);
+    padding: 1.25rem 0;
+  }
+  .fact-strip .fact:first-child { border-top: 0; }
+}
+
 /* ===== UTILITIES ===== */
 .text-center { text-align: center; }
 .muted { color: var(--ink-muted); }
