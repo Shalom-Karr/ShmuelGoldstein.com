@@ -34,6 +34,7 @@
   {
     "@context": "https://schema.org",
     "@type": "Person",
+    "@id": "https://shmuelgoldstein.com/#person",
     "name": "Rabbi Shmuel Goldstein",
     "givenName": "Shmuel",
     "familyName": "Goldstein",
@@ -49,6 +50,45 @@
     },
     "affiliation": { "@type": "Organization", "name": "Chevra M'vakshei Hashem" },
     "knowsAbout": ["Torah", "Relationship coaching", "Personal growth", "Men's coaching", "Tefila"]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ProfessionalService",
+    "@id": "https://shmuelgoldstein.com/#service",
+    "name": "Rabbi Shmuel Goldstein — Torah-Based Coaching",
+    "url": "https://shmuelgoldstein.com/",
+    "image": "https://shmuelgoldstein.com/assets/rabbi-goldstein.jpg",
+    "description": "Torah-based life and relationship coaching for individuals, couples, and families. Serving Cleveland, Ohio and clients worldwide via phone and Zoom.",
+    "serviceType": "Life and Relationship Coaching",
+    "priceRange": "$$",
+    "areaServed": [
+      {
+        "@type": "City",
+        "name": "Cleveland",
+        "containedInPlace": {
+          "@type": "State",
+          "name": "Ohio",
+          "containedInPlace": { "@type": "Country", "name": "United States" }
+        }
+      },
+      { "@type": "Country", "name": "United States" }
+    ],
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Cleveland",
+      "addressRegion": "OH",
+      "addressCountry": "US"
+    },
+    "provider": { "@id": "https://shmuelgoldstein.com/#person" },
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "customer service",
+      "url": "https://shmuelgoldstein.com/lets-talk.html",
+      "availableLanguage": ["English"]
+    },
+    "knowsAbout": ["Torah", "Relationship coaching", "Personal growth", "Men's coaching", "Marriage coaching"]
   }
   </script>
   <script type="application/ld+json">
