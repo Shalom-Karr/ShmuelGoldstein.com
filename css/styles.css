@@ -534,6 +534,18 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
   background-size: 0% 1px, 100% 1px;
   gap: 0.85rem;
 }
+.text-link:focus-visible {
+  outline: 2px solid var(--terracotta);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+@media (max-width: 720px) {
+  .text-link {
+    min-height: 44px;
+    padding-top: 6px;
+    padding-bottom: 10px;
+  }
+}
 
 /* ===== SECTIONS ===== */
 .section-ink { background: var(--ink); color: var(--sand); position: relative; }
