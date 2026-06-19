@@ -797,6 +797,17 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
   border-bottom: 1px solid var(--line-fine);
   position: relative;
   transition: padding 0.5s var(--ease);
+  scroll-margin-top: 6rem;
+}
+
+@keyframes service-row-pulse {
+  0%   { background-color: transparent; }
+  20%  { background-color: var(--terracotta-wash); }
+  100% { background-color: transparent; }
+}
+
+.service-row:target {
+  animation: service-row-pulse 1.6s ease-out 1;
 }
 
 .service-row::before {
