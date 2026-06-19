@@ -337,9 +337,13 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 }
 
 .primary-nav a:hover,
-.primary-nav a.is-active { color: var(--terracotta); }
+.primary-nav a.is-active,
+.primary-nav a[aria-current="page"] { color: var(--terracotta); }
 .primary-nav a:hover::after,
-.primary-nav a.is-active::after { transform: scaleX(1); transform-origin: left; }
+.primary-nav a.is-active::after,
+.primary-nav a[aria-current="page"]::after { transform: scaleX(1); transform-origin: left; }
+
+.mobile-drawer a[aria-current="page"] { color: var(--terracotta); }
 
 .nav-cta {
   padding: 0.6rem 1.35rem !important;
