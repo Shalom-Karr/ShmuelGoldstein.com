@@ -38,14 +38,6 @@ on conflict (slug) do nothing;
 -- ----- testimonials -----
 insert into testimonials (quote_text, attributed_to, role, category, featured, sort_order) values
   (
-    'Two and a half years after starting, I can honestly say I am a different person. I''ve learned powerful tools that help me through the toughest situations with my husband and children. Most of all, I have learned how to believe in myself.',
-    'Relationship Coaching Client',
-    'Wife & Mother',
-    'relationship',
-    true,
-    10
-  ),
-  (
     'Shmuel immediately made me feel comfortable—more like guys talking than a counselor/client relationship. He helped me find my inner courage and live with both strength and gentleness. Worth the investment!',
     'Men''s Coaching Client',
     null,
