@@ -2021,6 +2021,8 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 }
 
 /* ===== STORIES PAGE ===== */
+.stories-section { padding-top: 5rem; }
+
 .stories-grid {
   display: grid;
   gap: 1.75rem;
@@ -2028,6 +2030,9 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 }
 
 @media (min-width: 980px) { .stories-grid { grid-template-columns: 1fr 1fr; } }
+
+.quote-card.is-featured { grid-column: 1 / -1; }
+.quote-card.is-featured blockquote { font-size: 1.2rem; }
 
 /* ===== LETS-TALK PAGE ===== */
 .calendly-wrap {
