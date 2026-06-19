@@ -96,7 +96,7 @@ Note: every canonical URL, OG tag, and JSON-LD entry already references `https:/
 - [x] `loading="lazy"` on the bio portrait
 
 ### Still to do
-- [ ] **Custom OG share image** — 1200×630 with rabbi photo + tagline. Currently using the raw portrait, which platforms will crop awkwardly.
+- [x] **Custom OG share image** — 1200×630 (`/assets/og-image.jpg`) with portrait left + tagline right + terracotta accent. Referenced from all root pages with explicit width/height meta.
 - [ ] **`mailto:` buttons** on the 3 contact cards in `lets-talk.html` — blocked on knowing his real email address
 - [ ] **Embed actual Calendly widget** on `lets-talk.html` instead of the stub "Open the calendar" button — blocked on having the real Calendly URL
 - [ ] **Eyebrow on light backgrounds** — `.eyebrow.muted { color: var(--gold); }` has weak contrast on `--sand`. Swap to `var(--ink-muted)` or `var(--terracotta)`.
