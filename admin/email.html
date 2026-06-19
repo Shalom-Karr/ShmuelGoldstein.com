@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Email — Admin</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" href="/assets/favicons/favicon.ico" />
+  <link rel="stylesheet" href="/admin/_shared/admin.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="/js/config.js" defer></script>
+  <script src="/admin/_shared/ui.js" defer></script>
+  <script src="/admin/_shared/auth.js" defer></script>
+  <style>
+    .email-shell { display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: 16px; min-height: 600px; }
+    @media (max-width: 900px) { .email-shell { grid-template-columns: 1fr; } }
+    .email-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .email-tab { padding: 8px 14px; border-radius: 6px; cursor: pointer; border: 1px solid #e6dccb; background: #fffaf2; }
+    .email-tab.is-active { background: #1f1a14; color: #fff; border-color: #1f1a14; }
+    .inbox-list { background: #fffaf2; border: 1px solid #e6dccb; border-radius: 8px; overflow: hidden; max-height: 75vh; overflow-y: auto; }
+    .inbox-item { padding: 12px 14px; border-bottom: 1px solid #f0e8d8; cursor: pointer; }
+    .inbox-item:hover { background: #f5ecd9; }
+    .inbox-item.is-active { background: #f0e2c0; }
+    .inbox-item.is-unread .inbox-from { font-weight: 700; }
+    .inbox-from { font-size: 14px; color: #1f1a14; margin-bottom: 2px; display: block; }
+    .inbox-subject { font-size: 13px; color: #5b4632; margin-bottom: 2px; display: block; }
+    .inbox-date { font-size: 11px; color: #998466; }
+    .inbox-pane { background: #fffaf2; border: 1px solid #e6dccb; border-radius: 8px; padding: 20px; min-height: 400px; }
+    .msg-meta { border-bottom: 1px solid #f0e8d8; padding-bottom: 12px; margin-bottom: 16px; }
+    .msg-meta h2 { margin: 0 0 6px; font-size: 18px; }
+    .msg-meta .row { font-size: 13px; color: #5b4632; margin: 2px 0; }
+    .msg-body { background: #fff; border: 1px solid #f0e8d8; border-radius: 6px; }
+    .msg-body iframe { width: 100%; min-height: 420px; border: 0; }
+    .msg-body pre { padding: 16px; margin: 0; white-space: pre-wrap; font-family: Georgia, serif; font-size: 14px; }
+    .composer { background: #fffaf2; border: 1px solid #e6dccb; border-radius: 8px; padding: 20px; }
+    .composer label { display: block; margin: 10px 0 4px; font-size: 13px; color: #5b4632; }
+    .composer input, .composer textarea { width: 100%; padding: 10px 12px; border: 1px solid #e6dccb; border-radius: 6px; font-family: inherit; font-size: 14px; box-sizing: border-box; }
+    .composer textarea { min-height: 260px; resize: vertical; }
+    .composer .composer-actions { margin-top: 16px; display: flex; gap: 8px; align-items: center; }
+    .composer .composer-actions .help { color: #998466; font-size: 12px; margin-left: auto; }
+  </style>
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <a class="admin-brand" href="/admin/">
+      <span class="monogram">SG</span>
+      <span class="admin-brand-text">Admin <small>shmuelgoldstein.com</small></span>
+    </a>
+    <nav class="admin-nav">
+      <a href="/admin/">Dashboard</a>
+      <a href="/admin/testimonials.html">Testimonials</a>
+      <a href="/admin/shiurim.html">Shiurim</a>
+      <a href="/admin/subscribers.html">Subscribers</a>
+      <a href="/admin/messages.html">Messages</a>
+      <a href="/admin/email.html" class="is-active">Email</a>
+      <a href="/admin/analytics.html">Analytics</a>
+      <a href="/" target="_blank">View site ↗</a>
+    </nav>
+    <div class="admin-identity">
+      <span class="role">Signed in</span>
+      <span class="who" data-admin-identity>—</span>
+      <button class="admin-btn admin-btn--ghost admin-btn--xs" data-admin-logout type="button">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-head">
+      <div>
+        <h1>Email</h1>
+        <p class="sub">Read the rabbi@shmuelgoldstein.com inbox and send mail from the brand address.</p>
+      </div>
+      <button class="admin-btn admin-btn--ghost" id="refresh-btn" type="button">Refresh inbox</button>
+    </div>
+
+    <div class="email-tabs">
+      <button class="email-tab is-active" data-tab="inbox" type="button">Inbox</button>
+      <button class="email-tab" data-tab="compose" type="button">Compose</button>
+    </div>
+
+    <div id="tab-inbox">
+      <div class="email-shell">
+        <div class="inbox-list" id="inbox-list">Loading…</div>
+        <div class="inbox-pane" id="inbox-pane">
+          <div class="empty-state"><h3>Pick a message</h3><p>Click any message on the left to read it.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-compose" hidden>
+      <div class="composer">
+        <label for="cmp-to">To (comma-separated)</label>
+        <input type="text" id="cmp-to" autocomplete="off" placeholder="someone@example.com" />
+        <label for="cmp-subject">Subject</label>
+        <input type="text" id="cmp-subject" maxlength="240" />
+        <label for="cmp-body">Message</label>
+        <textarea id="cmp-body" placeholder="Plain-text message. HTML version is auto-generated."></textarea>
+        <div class="composer-actions">
+          <button class="admin-btn admin-btn--primary" id="cmp-send" type="button">Send</button>
+          <span class="help">From: rabbi@shmuelgoldstein.com · Reply-To: your admin email</span>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+window.adminReady.then(async (ctx) => {
+  if (!ctx) return;
+  const { sb } = ctx;
+  const ui = window.adminUI;
+
+  async function token() {
+    const { data: { session } } = await sb.auth.getSession();
+    return session ? session.access_token : null;
+  }
+
+  // ----- Tabs -----
+  document.querySelectorAll('.email-tab').forEach((b) => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.email-tab').forEach((x) => x.classList.toggle('is-active', x === b));
+      const which = b.dataset.tab;
+      document.getElementById('tab-inbox').hidden = which !== 'inbox';
+      document.getElementById('tab-compose').hidden = which !== 'compose';
+    });
+  });
+
+  // ----- Inbox -----
+  let messages = [];
+  let activeUid = null;
+
+  async function loadInbox() {
+    const t = await token();
+    if (!t) return;
+    document.getElementById('inbox-list').textContent = 'Loading…';
+    try {
+      const res = await fetch('/.netlify/functions/admin-inbox?limit=25', {
+        headers: { Authorization: 'Bearer ' + t },
+      });
+      const data = await res.json();
+      if (!res.ok) { ui.toast(data.error || 'Inbox failed', 'err'); document.getElementById('inbox-list').textContent = data.error || 'Failed'; return; }
+      messages = data.messages || [];
+      renderList();
+    } catch (err) {
+      ui.toast('Inbox network error', 'err');
+      document.getElementById('inbox-list').textContent = 'Network error';
+    }
+  }
+
+  function renderList() {
+    if (!messages.length) {
+      document.getElementById('inbox-list').innerHTML = '<div class="empty-state" style="padding:24px;"><h3>Inbox empty</h3></div>';
+      return;
+    }
+    document.getElementById('inbox-list').innerHTML = messages.map((m) => {
+      const fromName = (m.from && (m.from.name || m.from.address)) || 'Unknown sender';
+      const dateStr = m.date ? new Date(m.date).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '';
+      return `<div class="inbox-item ${m.unread ? 'is-unread' : ''} ${m.uid === activeUid ? 'is-active' : ''}" data-uid="${m.uid}">
+        <span class="inbox-from">${ui.escape(fromName)}</span>
+        <span class="inbox-subject">${ui.escape(m.subject || '(no subject)')}</span>
+        <span class="inbox-date">${ui.escape(dateStr)}</span>
+      </div>`;
+    }).join('');
+    document.querySelectorAll('.inbox-item').forEach((el) => {
+      el.addEventListener('click', () => openMessage(Number(el.dataset.uid)));
+    });
+  }
+
+  async function openMessage(uid) {
+    activeUid = uid;
+    renderList();
+    const pane = document.getElementById('inbox-pane');
+    pane.innerHTML = '<div class="empty-state"><h3>Loading…</h3></div>';
+    try {
+      const t = await token();
+      const res = await fetch('/.netlify/functions/admin-inbox?uid=' + encodeURIComponent(uid), {
+        headers: { Authorization: 'Bearer ' + t },
+      });
+      const m = await res.json();
+      if (!res.ok) { pane.innerHTML = '<div class="empty-state"><h3>Failed</h3><p>' + ui.escape(m.error || '') + '</p></div>'; return; }
+
+      const fromTxt = formatAddrs(m.from);
+      const toTxt = formatAddrs(m.to);
+      const when = m.date ? new Date(m.date).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' }) : '';
+
+      // Render HTML in a sandboxed iframe (no scripts, no same-origin) to keep the admin safe.
+      let bodyHtml;
+      if (m.html) {
+        bodyHtml = '<iframe sandbox="allow-popups" referrerpolicy="no-referrer" srcdoc="' + escapeForAttr(m.html) + '"></iframe>';
+      } else {
+        bodyHtml = '<pre>' + ui.escape(m.text || '(empty message)') + '</pre>';
+      }
+
+      pane.innerHTML = `
+        <div class="msg-meta">
+          <h2>${ui.escape(m.subject || '(no subject)')}</h2>
+          <div class="row"><strong>From:</strong> ${ui.escape(fromTxt)}</div>
+          ${toTxt ? `<div class="row"><strong>To:</strong> ${ui.escape(toTxt)}</div>` : ''}
+          <div class="row"><strong>Date:</strong> ${ui.escape(when)}</div>
+          <div class="row" style="margin-top:10px;">
+            <button class="admin-btn admin-btn--ghost admin-btn--xs" id="reply-btn" type="button">Reply</button>
+          </div>
+        </div>
+        <div class="msg-body">${bodyHtml}</div>
+      `;
+      const replyBtn = document.getElementById('reply-btn');
+      if (replyBtn) replyBtn.addEventListener('click', () => {
+        const replyAddr = (m.from && Array.isArray(m.from) ? m.from[0]?.address : m.from?.address) || '';
+        document.querySelector('[data-tab="compose"]').click();
+        document.getElementById('cmp-to').value = replyAddr;
+        document.getElementById('cmp-subject').value = (m.subject || '').toLowerCase().startsWith('re:') ? m.subject : 'Re: ' + (m.subject || '');
+        document.getElementById('cmp-body').focus();
+      });
+    } catch (err) {
+      pane.innerHTML = '<div class="empty-state"><h3>Network error</h3></div>';
+    }
+  }
+
+  function formatAddrs(a) {
+    if (!a) return '';
+    if (Array.isArray(a)) return a.map(formatAddrs).filter(Boolean).join(', ');
+    const name = a.name && a.name.trim();
+    return name ? `${name} <${a.address}>` : (a.address || '');
+  }
+  function escapeForAttr(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  document.getElementById('refresh-btn').addEventListener('click', loadInbox);
+
+  // ----- Composer -----
+  document.getElementById('cmp-send').addEventListener('click', async () => {
+    const btn = document.getElementById('cmp-send');
+    const to = document.getElementById('cmp-to').value.trim();
+    const subject = document.getElementById('cmp-subject').value.trim();
+    const text = document.getElementById('cmp-body').value;
+    if (!to || !subject || !text) { ui.toast('Fill to, subject, and message', 'warn'); return; }
+
+    btn.disabled = true; const oldLabel = btn.textContent; btn.textContent = 'Sending…';
+    try {
+      const t = await token();
+      const res = await fetch('/.netlify/functions/admin-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
+        body: JSON.stringify({ to, subject, text }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        ui.toast('Sent.', 'ok');
+        document.getElementById('cmp-body').value = '';
+        document.getElementById('cmp-subject').value = '';
+        document.getElementById('cmp-to').value = '';
+      } else {
+        ui.toast(data.error || 'Send failed', 'err');
+      }
+    } catch (err) {
+      ui.toast('Network error', 'err');
+    } finally {
+      btn.disabled = false; btn.textContent = oldLabel;
+    }
+  });
+
+  loadInbox();
+});
+});
+</script>
+</body>
+</html>

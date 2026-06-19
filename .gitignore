@@ -17,6 +17,14 @@ Thumbs.db
 # Local Netlify folder
 .netlify
 
+# Local env (secrets — Netlify is the source of truth in prod)
+.env
+.env.local
+.env.*.local
+
+# Node deps
+node_modules/
+
 # Design / inspiration archives — local reference only
 _archive/
 

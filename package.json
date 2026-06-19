@@ -1,0 +1,12 @@
+{
+  "name": "shmuelgoldstein",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Static marketing site + Netlify Functions for ShmuelGoldstein.com",
+  "dependencies": {
+    "@netlify/functions": "^2.8.2",
+    "imapflow": "^1.0.187",
+    "mailparser": "^3.7.1",
+    "nodemailer": "^6.9.16"
+  }
+}
