@@ -2126,6 +2126,45 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 .quote-card.is-featured { grid-column: 1 / -1; }
 .quote-card.is-featured blockquote { font-size: 1.2rem; }
 
+.inline-cta-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 1.1rem 1.5rem;
+  border-top: 1px solid var(--gold);
+  border-bottom: 1px solid var(--gold);
+  background: transparent;
+  margin: 0.5rem 0;
+}
+.inline-cta-msg {
+  margin: 0;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 1.05rem;
+  color: var(--ink-2);
+  letter-spacing: 0.005em;
+}
+.inline-cta-link {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--terracotta);
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 1px solid transparent;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+.inline-cta-link:hover,
+.inline-cta-link:focus-visible {
+  color: var(--terracotta-deep);
+  border-bottom-color: var(--terracotta-deep);
+}
+@media (max-width: 640px) {
+  .inline-cta-strip { padding: 1rem 1.1rem; gap: 0.75rem; }
+  .inline-cta-msg { font-size: 1rem; }
+}
+
 /* ===== LETS-TALK PAGE ===== */
 .calendly-wrap {
   background: var(--paper);
