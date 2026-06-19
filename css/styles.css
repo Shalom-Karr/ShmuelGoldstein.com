@@ -1154,6 +1154,7 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 .pullquote .container { position: relative; z-index: 2; }
 
 .pullquote-body {
+  margin: 0;
   font-family: var(--serif-display);
   font-style: italic;
   font-weight: 400;
