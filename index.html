@@ -277,10 +277,11 @@
         <form class="email-capture" name="newsletter" method="POST" action="/.netlify/functions/subscribe" data-netlify="true" data-netlify-honeypot="bot-field">
           <input type="hidden" name="form-name" value="newsletter" />
           <p class="hp" aria-hidden="true"><label>Leave this empty: <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
-          <input type="email" name="email" placeholder="your@email.com" required aria-label="Email address" />
+          <label for="footer-email" class="visually-hidden">Email address</label>
+          <input id="footer-email" type="email" name="email" placeholder="your@email.com" required aria-describedby="footer-newsletter-msg" />
           <button type="submit">Join</button>
         </form>
-        <div class="form-msg" aria-live="polite"></div>
+        <div id="footer-newsletter-msg" class="form-msg" aria-live="polite"></div>
       </div>
       <div class="footer-col">
         <h3>Explore</h3>
