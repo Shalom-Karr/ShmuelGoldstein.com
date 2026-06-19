@@ -2054,6 +2054,12 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
   padding: 4rem 0;
 }
 
+.shiurim-load-more-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 2.5rem;
+}
+
 /* ----- player modal ----- */
 .shiur-modal {
   position: fixed;

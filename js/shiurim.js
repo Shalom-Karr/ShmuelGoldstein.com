@@ -7,9 +7,16 @@
   const grid = document.getElementById('shiurim-grid');
   const empty = document.querySelector('.shiurim-empty');
   const searchInput = document.getElementById('shiur-search');
+  const loadMoreBtn = document.getElementById('shiurim-load-more');
   let filters = document.querySelectorAll('.shiurim-filter');
   let activeTopic = 'all';
   let activeQuery = '';
+
+  const PAGE_SIZE = 24;
+  let offset = 0;
+  let loading = false;
+  let exhausted = false;
+  let firstFetchDone = false;
 
   // ----- helpers -----
   const escape = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
@@ -218,20 +225,78 @@
   wireSearch();
   wireCards();
 
-  // ----- Hydrate from Supabase -----
+  // ----- Hydrate from Supabase (paginated) -----
   if (!sb || !grid) return;
 
-  sb.from('shiurim')
-    .select('*')
-    .eq('published', true)
-    .order('recorded_at', { ascending: false })
-    .limit(50)
-    .then(({ data, error }) => {
-      if (error || !Array.isArray(data) || !data.length) return;
-      grid.innerHTML = data.map(renderCard).join('');
-      wireCards();
-      const active = document.querySelector('.shiurim-filter.is-active');
-      applyFilter(active ? active.dataset.topic : 'all', searchInput ? searchInput.value : '');
-    })
-    .catch(() => { /* keep static fallback */ });
+  const setLoadMoreVisible = (visible) => {
+    if (!loadMoreBtn) return;
+    loadMoreBtn.hidden = !visible;
+  };
+
+  const fetchPage = () => {
+    if (loading || exhausted) return;
+    loading = true;
+    if (loadMoreBtn) {
+      loadMoreBtn.disabled = true;
+      loadMoreBtn.dataset.originalText = loadMoreBtn.dataset.originalText || loadMoreBtn.textContent;
+      loadMoreBtn.textContent = 'Loading…';
+    }
+
+    sb.from('shiurim')
+      .select('*')
+      .eq('published', true)
+      .order('recorded_at', { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1)
+      .then(({ data, error }) => {
+        loading = false;
+        if (loadMoreBtn) {
+          loadMoreBtn.disabled = false;
+          if (loadMoreBtn.dataset.originalText) loadMoreBtn.textContent = loadMoreBtn.dataset.originalText;
+        }
+        if (error) return;
+        const rows = Array.isArray(data) ? data : [];
+
+        if (!firstFetchDone) {
+          firstFetchDone = true;
+          if (rows.length) {
+            // first successful page replaces the static fallback
+            grid.innerHTML = rows.map(renderCard).join('');
+          } else {
+            // no rows at all — leave fallback intact
+            exhausted = true;
+            setLoadMoreVisible(false);
+            return;
+          }
+        } else if (rows.length) {
+          grid.insertAdjacentHTML('beforeend', rows.map(renderCard).join(''));
+        }
+
+        offset += rows.length;
+        if (rows.length < PAGE_SIZE) {
+          exhausted = true;
+          setLoadMoreVisible(false);
+        } else {
+          setLoadMoreVisible(true);
+        }
+
+        wireCards();
+        const active = document.querySelector('.shiurim-filter.is-active');
+        applyFilter(active ? active.dataset.topic : 'all', searchInput ? searchInput.value : '');
+      })
+      .catch(() => {
+        loading = false;
+        if (loadMoreBtn) {
+          loadMoreBtn.disabled = false;
+          if (loadMoreBtn.dataset.originalText) loadMoreBtn.textContent = loadMoreBtn.dataset.originalText;
+        }
+        /* keep static fallback */
+      });
+  };
+
+  if (loadMoreBtn) {
+    loadMoreBtn.hidden = true;
+    loadMoreBtn.addEventListener('click', fetchPage);
+  }
+
+  fetchPage();
 })();
