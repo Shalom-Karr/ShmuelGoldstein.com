@@ -20,7 +20,7 @@ function getTransport() {
   return cached;
 }
 
-async function sendMail({ to, subject, html, text, replyTo, cc, bcc }) {
+async function sendMail({ to, subject, html, text, replyTo, cc, bcc, attachments }) {
   const t = getTransport();
   if (!t) throw new Error('SMTP not configured (missing SMTP_HOST/SMTP_USER/SMTP_PASS)');
   const fromAddr = process.env.SMTP_FROM || process.env.SMTP_USER;
@@ -34,6 +34,7 @@ async function sendMail({ to, subject, html, text, replyTo, cc, bcc }) {
     replyTo,
     cc,
     bcc,
+    attachments,
   });
 }
 

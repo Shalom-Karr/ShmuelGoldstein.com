@@ -7,8 +7,11 @@ const { sendMail } = require('./_shared/mail');
 
 const EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 const MAX_RECIPIENTS = 50;
-const MAX_BODY_BYTES = 256 * 1024;
+const MAX_BODY_BYTES = 12 * 1024 * 1024; // 12MB — covers ~9MB of base64 attachments + headroom
 const MAX_SUBJECT = 240;
+const MAX_ATTACHMENTS = 10;
+const MAX_ATTACHMENT_TOTAL = 9 * 1024 * 1024;  // 9MB raw — matches client cap
+const ALLOWED_ATT_TYPES = /^(image\/(png|jpeg|gif|webp|svg\+xml)|application\/pdf|text\/plain)$/;
 
 const recent = new Map(); // crude per-user send-rate map; resets on cold start
 
@@ -52,6 +55,32 @@ exports.handler = async (event) => {
 
   const replyTo = body.replyTo && EMAIL_RE.test(String(body.replyTo)) ? String(body.replyTo) : undefined;
 
+  let attachments;
+  if (Array.isArray(body.attachments) && body.attachments.length) {
+    if (body.attachments.length > MAX_ATTACHMENTS) {
+      return json(400, { error: `Too many attachments (max ${MAX_ATTACHMENTS})` });
+    }
+    let total = 0;
+    attachments = [];
+    for (const a of body.attachments) {
+      if (!a || typeof a !== 'object') return json(400, { error: 'Invalid attachment' });
+      const filename = String(a.filename || '').replace(/[^\w.\- ]/g, '_').slice(0, 120);
+      const contentType = String(a.contentType || 'application/octet-stream');
+      const content = String(a.content || '');
+      const cid = a.cid ? String(a.cid).replace(/[^\w.-]/g, '').slice(0, 80) : undefined;
+      if (!ALLOWED_ATT_TYPES.test(contentType)) {
+        return json(400, { error: `Attachment type not allowed: ${contentType}` });
+      }
+      // base64 decoded size = ceil(len*3/4) — minus '=' padding. Approximate is fine.
+      const rawBytes = Math.floor(content.length * 0.75);
+      total += rawBytes;
+      if (total > MAX_ATTACHMENT_TOTAL) {
+        return json(400, { error: 'Attachments exceed 9MB total' });
+      }
+      attachments.push({ filename, contentType, content, encoding: 'base64', cid });
+    }
+  }
+
   try {
     const info = await sendMail({
       to: toList,
@@ -59,6 +88,7 @@ exports.handler = async (event) => {
       html,
       text,
       replyTo: replyTo || a.admin.email,
+      attachments,
     });
     log.push(now); recent.set(userKey, log);
     return json(200, { ok: true, accepted: info.accepted, rejected: info.rejected });

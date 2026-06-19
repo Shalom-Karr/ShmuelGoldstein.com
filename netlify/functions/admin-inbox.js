@@ -40,6 +40,7 @@ exports.handler = async (event) => {
         const msg = await client.fetchOne(String(uid), { source: true, envelope: true, flags: true }, { uid: true });
         if (!msg || !msg.source) return json(404, { error: 'Not found' });
         const parsed = await simpleParser(msg.source);
+        // A given UID's body is immutable in IMAP, so the browser can cache hard.
         return json(200, {
           uid: msg.uid,
           from: addr(parsed.from),
@@ -54,7 +55,7 @@ exports.handler = async (event) => {
             size: at.size,
             contentType: at.contentType,
           })),
-        });
+        }, { 'Cache-Control': 'private, max-age=3600, immutable' });
       }
 
       const total = client.mailbox.exists;
@@ -66,13 +67,15 @@ exports.handler = async (event) => {
         list.push({
           uid: msg.uid,
           from: msg.envelope?.from?.[0] || null,
+          to: msg.envelope?.to || [],
           subject: msg.envelope?.subject || '(no subject)',
           date: msg.envelope?.date,
           unread: !msg.flags.has('\\Seen'),
         });
       }
       list.reverse();
-      return json(200, { messages: list, total });
+      // Hint long-lived caching on the client; UI calls "Refresh inbox" to bust.
+      return json(200, { messages: list, total }, { 'Cache-Control': 'private, max-age=10' });
     } finally {
       lock.release();
     }
@@ -96,6 +99,14 @@ const addr = (a) => {
 function cors(status) {
   return { statusCode: status, headers: { 'Access-Control-Allow-Origin': 'https://shmuelgoldstein.com', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Allow-Methods': 'GET, OPTIONS' }, body: '' };
 }
-function json(status, obj) {
-  return { statusCode: status, headers: { 'Access-Control-Allow-Origin': 'https://shmuelgoldstein.com', 'Content-Type': 'application/json' }, body: JSON.stringify(obj) };
+function json(status, obj, extraHeaders) {
+  return {
+    statusCode: status,
+    headers: {
+      'Access-Control-Allow-Origin': 'https://shmuelgoldstein.com',
+      'Content-Type': 'application/json',
+      ...(extraHeaders || {}),
+    },
+    body: JSON.stringify(obj),
+  };
 }

@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="/admin/_shared/admin.css" />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@11/marked.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js" defer></script>
   <script src="/js/config.js" defer></script>
   <script src="/admin/_shared/ui.js" defer></script>
   <script src="/admin/_shared/auth.js" defer></script>
@@ -81,6 +83,16 @@
     </div>
 
     <div id="tab-inbox">
+      <div class="inbox-toolbar" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+        <input id="inbox-search" type="search" placeholder="Search subject / sender / preview…" style="flex:1;min-width:220px;padding:8px 10px;border:1px solid #e6dccb;border-radius:6px;background:#fffaf2;font-family:inherit;font-size:14px;" autocomplete="off" />
+        <select id="inbox-to" style="padding:8px 10px;border:1px solid #e6dccb;border-radius:6px;background:#fffaf2;font-family:inherit;font-size:14px;">
+          <option value="">All recipients</option>
+        </select>
+        <label style="font-size:12px;color:var(--ink-muted);display:flex;align-items:center;gap:6px;">
+          <input id="inbox-unread-only" type="checkbox" /> Unread only
+        </label>
+        <span id="inbox-count" style="font-size:12px;color:var(--ink-muted);"></span>
+      </div>
       <div class="email-shell">
         <div class="inbox-list" id="inbox-list">Loading…</div>
         <div class="inbox-pane" id="inbox-pane">
@@ -95,11 +107,29 @@
         <input type="text" id="cmp-to" autocomplete="off" placeholder="someone@example.com" />
         <label for="cmp-subject">Subject</label>
         <input type="text" id="cmp-subject" maxlength="240" />
-        <label for="cmp-body">Message</label>
-        <textarea id="cmp-body" placeholder="Plain-text message. HTML version is auto-generated."></textarea>
+
+        <div style="display:flex;gap:8px;align-items:center;margin-top:14px;margin-bottom:4px;flex-wrap:wrap;">
+          <label style="margin:0;font-size:13px;color:#5b4632;">Message (Markdown)</label>
+          <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
+            <button class="admin-btn admin-btn--ghost admin-btn--xs" id="cmp-tab-edit" type="button">Edit</button>
+            <button class="admin-btn admin-btn--ghost admin-btn--xs" id="cmp-tab-preview" type="button">Preview</button>
+            <label class="admin-btn admin-btn--ghost admin-btn--xs" style="cursor:pointer;margin:0;" for="cmp-images">+ Image</label>
+            <input id="cmp-images" type="file" accept="image/*" multiple hidden />
+          </div>
+        </div>
+
+        <div id="cmp-edit-pane">
+          <textarea id="cmp-body" placeholder="**Bold**, *italic*, [link](https://...), ![alt](cid:img-1) for an attached image.
+
+Drag images in, paste from clipboard, or click + Image."></textarea>
+        </div>
+        <div id="cmp-preview-pane" hidden style="background:#fff;border:1px solid #e6dccb;border-radius:6px;padding:16px;min-height:260px;line-height:1.55;"></div>
+
+        <div id="cmp-attachments" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;"></div>
+
         <div class="composer-actions">
           <button class="admin-btn admin-btn--primary" id="cmp-send" type="button">Send</button>
-          <span class="help">From: rabbi@shmuelgoldstein.com · Reply-To: your admin email</span>
+          <span class="help">From: rabbi@shmuelgoldstein.com · Reply-To: your admin email · Markdown + inline images</span>
         </div>
       </div>
     </div>
@@ -131,6 +161,9 @@ window.adminReady.then(async (ctx) => {
   // ----- Inbox -----
   let messages = [];
   let activeUid = null;
+  const bodyCache = new Map();        // uid -> parsed message body
+  const inflight = new Map();         // uid -> Promise (prevents duplicate fetches)
+  const PREFETCH_TOP_N = 5;
 
   async function loadInbox() {
     const t = await token();
@@ -143,81 +176,172 @@ window.adminReady.then(async (ctx) => {
       const data = await res.json();
       if (!res.ok) { ui.toast(data.error || 'Inbox failed', 'err'); document.getElementById('inbox-list').textContent = data.error || 'Failed'; return; }
       messages = data.messages || [];
+      // Bust per-uid caches that don't apply anymore (e.g. on Refresh).
+      // Keep ones whose UID is still in the list — IMAP UIDs are stable.
+      const liveUids = new Set(messages.map((m) => m.uid));
+      for (const k of Array.from(bodyCache.keys())) if (!liveUids.has(k)) bodyCache.delete(k);
+      buildToFilter();
       renderList();
+      // Warm the cache for the most recent messages so clicks are instant.
+      messages.slice(0, PREFETCH_TOP_N).forEach((m) => { prefetchBody(m.uid); });
     } catch (err) {
       ui.toast('Inbox network error', 'err');
       document.getElementById('inbox-list').textContent = 'Network error';
     }
   }
 
+  // ----- Filters -----
+  function getFilterState() {
+    return {
+      q: (document.getElementById('inbox-search').value || '').trim().toLowerCase(),
+      to: document.getElementById('inbox-to').value || '',
+      unread: document.getElementById('inbox-unread-only').checked,
+    };
+  }
+
+  function visibleMessages() {
+    const { q, to, unread } = getFilterState();
+    return messages.filter((m) => {
+      if (unread && !m.unread) return false;
+      if (to) {
+        const tos = (m.to || []).map((t) => (t.address || '').toLowerCase());
+        if (!tos.includes(to)) return false;
+      }
+      if (q) {
+        const fromTxt = ((m.from && (m.from.name || '')) + ' ' + ((m.from && m.from.address) || '')).toLowerCase();
+        const subj = (m.subject || '').toLowerCase();
+        const toTxt = (m.to || []).map((t) => `${t.name || ''} ${t.address || ''}`).join(' ').toLowerCase();
+        if (!fromTxt.includes(q) && !subj.includes(q) && !toTxt.includes(q)) return false;
+      }
+      return true;
+    });
+  }
+
+  function buildToFilter() {
+    const sel = document.getElementById('inbox-to');
+    const prev = sel.value;
+    const counts = new Map();
+    for (const m of messages) {
+      for (const t of (m.to || [])) {
+        const addr = (t.address || '').toLowerCase();
+        if (!addr) continue;
+        counts.set(addr, (counts.get(addr) || 0) + 1);
+      }
+    }
+    const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+    sel.innerHTML = '<option value="">All recipients</option>' +
+      sorted.map(([a, c]) => `<option value="${a}">${a} (${c})</option>`).join('');
+    if (sorted.find(([a]) => a === prev)) sel.value = prev;
+  }
+
   function renderList() {
-    if (!messages.length) {
-      document.getElementById('inbox-list').innerHTML = '<div class="empty-state" style="padding:24px;"><h3>Inbox empty</h3></div>';
+    const list = visibleMessages();
+    const countEl = document.getElementById('inbox-count');
+    countEl.textContent = list.length === messages.length
+      ? `${messages.length} message${messages.length === 1 ? '' : 's'}`
+      : `${list.length} of ${messages.length}`;
+    if (!list.length) {
+      document.getElementById('inbox-list').innerHTML = '<div class="empty-state" style="padding:24px;"><h3>No matches</h3></div>';
       return;
     }
-    document.getElementById('inbox-list').innerHTML = messages.map((m) => {
+    document.getElementById('inbox-list').innerHTML = list.map((m) => {
       const fromName = (m.from && (m.from.name || m.from.address)) || 'Unknown sender';
       const dateStr = m.date ? new Date(m.date).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '';
-      return `<div class="inbox-item ${m.unread ? 'is-unread' : ''} ${m.uid === activeUid ? 'is-active' : ''}" data-uid="${m.uid}">
+      const toFirst = (m.to && m.to[0] && m.to[0].address) || '';
+      return `<div class="inbox-item ${m.unread ? 'is-unread' : ''} ${m.uid === activeUid ? 'is-active' : ''}" data-uid="${m.uid}" title="To: ${ui.escape(toFirst)}">
         <span class="inbox-from">${ui.escape(fromName)}</span>
         <span class="inbox-subject">${ui.escape(m.subject || '(no subject)')}</span>
         <span class="inbox-date">${ui.escape(dateStr)}</span>
       </div>`;
     }).join('');
     document.querySelectorAll('.inbox-item').forEach((el) => {
-      el.addEventListener('click', () => openMessage(Number(el.dataset.uid)));
+      const uid = Number(el.dataset.uid);
+      el.addEventListener('click', () => openMessage(uid));
+      el.addEventListener('mouseenter', () => { prefetchBody(uid); }, { passive: true });
     });
+  }
+
+  // Returns a promise for the parsed body. De-duped per UID.
+  async function prefetchBody(uid) {
+    if (bodyCache.has(uid)) return bodyCache.get(uid);
+    if (inflight.has(uid)) return inflight.get(uid);
+    const p = (async () => {
+      const t = await token();
+      const res = await fetch('/.netlify/functions/admin-inbox?uid=' + encodeURIComponent(uid), {
+        headers: { Authorization: 'Bearer ' + t },
+      });
+      const m = await res.json();
+      if (!res.ok) { inflight.delete(uid); throw new Error(m.error || 'Failed'); }
+      bodyCache.set(uid, m);
+      inflight.delete(uid);
+      return m;
+    })();
+    inflight.set(uid, p);
+    p.catch(() => { inflight.delete(uid); });
+    return p;
   }
 
   async function openMessage(uid) {
     activeUid = uid;
     renderList();
     const pane = document.getElementById('inbox-pane');
-    pane.innerHTML = '<div class="empty-state"><h3>Loading…</h3></div>';
+    // Show cached body instantly if we have it; otherwise placeholder.
+    if (bodyCache.has(uid)) {
+      paintMessage(pane, bodyCache.get(uid));
+    } else {
+      pane.innerHTML = '<div class="empty-state"><h3>Loading…</h3></div>';
+    }
     try {
-      const t = await token();
-      const res = await fetch('/.netlify/functions/admin-inbox?uid=' + encodeURIComponent(uid), {
-        headers: { Authorization: 'Bearer ' + t },
-      });
-      const m = await res.json();
-      if (!res.ok) { pane.innerHTML = '<div class="empty-state"><h3>Failed</h3><p>' + ui.escape(m.error || '') + '</p></div>'; return; }
-
-      const fromTxt = formatAddrs(m.from);
-      const toTxt = formatAddrs(m.to);
-      const when = m.date ? new Date(m.date).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' }) : '';
-
-      // Render HTML in a sandboxed iframe (no scripts, no same-origin) to keep the admin safe.
-      let bodyHtml;
-      if (m.html) {
-        bodyHtml = '<iframe sandbox="allow-popups" referrerpolicy="no-referrer" srcdoc="' + escapeForAttr(m.html) + '"></iframe>';
-      } else {
-        bodyHtml = '<pre>' + ui.escape(m.text || '(empty message)') + '</pre>';
-      }
-
-      pane.innerHTML = `
-        <div class="msg-meta">
-          <h2>${ui.escape(m.subject || '(no subject)')}</h2>
-          <div class="row"><strong>From:</strong> ${ui.escape(fromTxt)}</div>
-          ${toTxt ? `<div class="row"><strong>To:</strong> ${ui.escape(toTxt)}</div>` : ''}
-          <div class="row"><strong>Date:</strong> ${ui.escape(when)}</div>
-          <div class="row" style="margin-top:10px;">
-            <button class="admin-btn admin-btn--ghost admin-btn--xs" id="reply-btn" type="button">Reply</button>
-          </div>
-        </div>
-        <div class="msg-body">${bodyHtml}</div>
-      `;
-      const replyBtn = document.getElementById('reply-btn');
-      if (replyBtn) replyBtn.addEventListener('click', () => {
-        const replyAddr = (m.from && Array.isArray(m.from) ? m.from[0]?.address : m.from?.address) || '';
-        document.querySelector('[data-tab="compose"]').click();
-        document.getElementById('cmp-to').value = replyAddr;
-        document.getElementById('cmp-subject').value = (m.subject || '').toLowerCase().startsWith('re:') ? m.subject : 'Re: ' + (m.subject || '');
-        document.getElementById('cmp-body').focus();
-      });
+      const m = await prefetchBody(uid);
+      // Only paint if the user hasn't clicked away.
+      if (uid === activeUid) paintMessage(pane, m);
     } catch (err) {
-      pane.innerHTML = '<div class="empty-state"><h3>Network error</h3></div>';
+      if (uid === activeUid) {
+        pane.innerHTML = '<div class="empty-state"><h3>Failed</h3><p>' + ui.escape(err.message) + '</p></div>';
+      }
     }
   }
+
+  function paintMessage(pane, m) {
+    const fromTxt = formatAddrs(m.from);
+    const toTxt = formatAddrs(m.to);
+    const when = m.date ? new Date(m.date).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' }) : '';
+    let bodyHtml;
+    if (m.html) {
+      bodyHtml = '<iframe sandbox="allow-popups" referrerpolicy="no-referrer" srcdoc="' + escapeForAttr(m.html) + '"></iframe>';
+    } else {
+      bodyHtml = '<pre>' + ui.escape(m.text || '(empty message)') + '</pre>';
+    }
+    pane.innerHTML = `
+      <div class="msg-meta">
+        <h2>${ui.escape(m.subject || '(no subject)')}</h2>
+        <div class="row"><strong>From:</strong> ${ui.escape(fromTxt)}</div>
+        ${toTxt ? `<div class="row"><strong>To:</strong> ${ui.escape(toTxt)}</div>` : ''}
+        <div class="row"><strong>Date:</strong> ${ui.escape(when)}</div>
+        <div class="row" style="margin-top:10px;">
+          <button class="admin-btn admin-btn--ghost admin-btn--xs" id="reply-btn" type="button">Reply</button>
+        </div>
+      </div>
+      <div class="msg-body">${bodyHtml}</div>
+    `;
+    const replyBtn = document.getElementById('reply-btn');
+    if (replyBtn) replyBtn.addEventListener('click', () => {
+      const replyAddr = (m.from && Array.isArray(m.from) ? m.from[0]?.address : m.from?.address) || '';
+      document.querySelector('[data-tab="compose"]').click();
+      document.getElementById('cmp-to').value = replyAddr;
+      document.getElementById('cmp-subject').value = (m.subject || '').toLowerCase().startsWith('re:') ? m.subject : 'Re: ' + (m.subject || '');
+      document.getElementById('cmp-body').focus();
+    });
+  }
+
+  // Re-render the list when filters change.
+  let filterDebounce;
+  document.getElementById('inbox-search').addEventListener('input', () => {
+    clearTimeout(filterDebounce);
+    filterDebounce = setTimeout(renderList, 80);
+  });
+  document.getElementById('inbox-to').addEventListener('change', renderList);
+  document.getElementById('inbox-unread-only').addEventListener('change', renderList);
 
   function formatAddrs(a) {
     if (!a) return '';
@@ -231,13 +355,145 @@ window.adminReady.then(async (ctx) => {
 
   document.getElementById('refresh-btn').addEventListener('click', loadInbox);
 
-  // ----- Composer -----
+  // ----- Composer (Markdown + inline images) -----
+  const composer = {
+    body: document.getElementById('cmp-body'),
+    edit: document.getElementById('cmp-edit-pane'),
+    preview: document.getElementById('cmp-preview-pane'),
+    attBox: document.getElementById('cmp-attachments'),
+    imgInput: document.getElementById('cmp-images'),
+    attachments: [], // { id, filename, contentType, base64 (no prefix), size }
+  };
+  const MAX_ATT_TOTAL = 9 * 1024 * 1024;  // 9MB total cap (matches server)
+  const MAX_ATT_COUNT = 10;
+
+  function fmtBytes(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  function renderAttachments() {
+    if (!composer.attachments.length) { composer.attBox.innerHTML = ''; return; }
+    composer.attBox.innerHTML = composer.attachments.map((a) => `
+      <span data-id="${a.id}" style="display:inline-flex;gap:6px;align-items:center;background:#fff5e3;border:1px solid #e6dccb;border-radius:14px;padding:4px 10px;font-size:12px;">
+        ${ui.escape(a.filename)} <span style="color:#998466;">(${fmtBytes(a.size)})</span>
+        <button type="button" data-insert title="Insert at cursor" style="background:none;border:0;cursor:pointer;color:#b85c1f;">↩</button>
+        <button type="button" data-remove title="Remove" style="background:none;border:0;cursor:pointer;color:#b03030;">×</button>
+      </span>
+    `).join('');
+    composer.attBox.querySelectorAll('[data-remove]').forEach((b) => b.addEventListener('click', (e) => {
+      const id = e.target.closest('[data-id]').dataset.id;
+      composer.attachments = composer.attachments.filter((x) => x.id !== id);
+      renderAttachments();
+    }));
+    composer.attBox.querySelectorAll('[data-insert]').forEach((b) => b.addEventListener('click', (e) => {
+      const id = e.target.closest('[data-id]').dataset.id;
+      const a = composer.attachments.find((x) => x.id === id);
+      insertAtCursor(composer.body, `\n![${a.filename.replace(/[\[\]]/g, '')}](cid:${a.id})\n`);
+    }));
+  }
+
+  function insertAtCursor(ta, text) {
+    const start = ta.selectionStart, end = ta.selectionEnd;
+    ta.value = ta.value.slice(0, start) + text + ta.value.slice(end);
+    ta.selectionStart = ta.selectionEnd = start + text.length;
+    ta.focus();
+    renderPreview();
+  }
+
+  async function addImageFile(file) {
+    if (!file || !file.type.startsWith('image/')) { ui.toast('Not an image: ' + file.name, 'warn'); return; }
+    if (composer.attachments.length >= MAX_ATT_COUNT) { ui.toast(`Max ${MAX_ATT_COUNT} images per email`, 'warn'); return; }
+    const current = composer.attachments.reduce((s, a) => s + a.size, 0);
+    if (current + file.size > MAX_ATT_TOTAL) { ui.toast('Total attachments over 9MB — skipping ' + file.name, 'warn'); return; }
+    const base64 = await new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onerror = () => reject(fr.error);
+      fr.onload = () => { const s = String(fr.result || ''); resolve(s.slice(s.indexOf(',') + 1)); };
+      fr.readAsDataURL(file);
+    });
+    const id = 'img-' + Math.random().toString(36).slice(2, 8);
+    composer.attachments.push({ id, filename: file.name || (id + '.png'), contentType: file.type, base64, size: file.size });
+    renderAttachments();
+    // Auto-insert a reference at the end so the user sees it immediately.
+    insertAtCursor(composer.body, `\n![${(file.name || 'image').replace(/[\[\]]/g, '')}](cid:${id})\n`);
+  }
+
+  composer.imgInput.addEventListener('change', async (e) => {
+    for (const f of Array.from(e.target.files || [])) await addImageFile(f);
+    e.target.value = '';
+  });
+
+  // Drag-drop + paste support on the textarea.
+  composer.body.addEventListener('dragover', (e) => { e.preventDefault(); });
+  composer.body.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    for (const f of Array.from(e.dataTransfer.files || [])) await addImageFile(f);
+  });
+  composer.body.addEventListener('paste', async (e) => {
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    for (const it of items) {
+      if (it.kind === 'file' && it.type.startsWith('image/')) {
+        e.preventDefault();
+        const f = it.getAsFile();
+        if (f) await addImageFile(f);
+      }
+    }
+  });
+
+  // Markdown render: replace cid: refs with data URIs only for the in-app preview.
+  function renderPreview() {
+    if (composer.preview.hidden) return;
+    let md = composer.body.value || '';
+    md = md.replace(/!\[([^\]]*)\]\(cid:([\w.-]+)\)/g, (m, alt, cid) => {
+      const a = composer.attachments.find((x) => x.id === cid);
+      if (!a) return m;
+      return `![${alt}](data:${a.contentType};base64,${a.base64})`;
+    });
+    let html = '';
+    if (window.marked) {
+      window.marked.setOptions({ breaks: true, gfm: true });
+      html = window.marked.parse(md);
+    } else {
+      html = ui.escape(md).replace(/\n/g, '<br>');
+    }
+    const safe = window.DOMPurify ? window.DOMPurify.sanitize(html, { ADD_ATTR: ['target'] }) : html;
+    composer.preview.innerHTML = safe || '<p style="color:#998466;">(empty)</p>';
+  }
+  composer.body.addEventListener('input', renderPreview);
+
+  // Edit / Preview toggle.
+  document.getElementById('cmp-tab-edit').addEventListener('click', () => {
+    composer.edit.hidden = false; composer.preview.hidden = true;
+  });
+  document.getElementById('cmp-tab-preview').addEventListener('click', () => {
+    composer.edit.hidden = true; composer.preview.hidden = false;
+    renderPreview();
+  });
+
+  // Send: convert markdown → HTML for the wire, attach images with CIDs.
   document.getElementById('cmp-send').addEventListener('click', async () => {
     const btn = document.getElementById('cmp-send');
     const to = document.getElementById('cmp-to').value.trim();
     const subject = document.getElementById('cmp-subject').value.trim();
-    const text = document.getElementById('cmp-body').value;
-    if (!to || !subject || !text) { ui.toast('Fill to, subject, and message', 'warn'); return; }
+    const mdText = composer.body.value;
+    if (!to || !subject || !mdText) { ui.toast('Fill to, subject, and message', 'warn'); return; }
+
+    if (!window.marked) { ui.toast('Editor still loading — try again in a moment', 'warn'); return; }
+    window.marked.setOptions({ breaks: true, gfm: true });
+    const innerHtml = window.DOMPurify
+      ? window.DOMPurify.sanitize(window.marked.parse(mdText), { ADD_ATTR: ['target'] })
+      : window.marked.parse(mdText);
+    const html = `<!doctype html><html><body style="font-family:Georgia,'Times New Roman',serif;color:#1f1a14;line-height:1.55;">${innerHtml}</body></html>`;
+
+    const attachments = composer.attachments.map((a) => ({
+      filename: a.filename,
+      content: a.base64,
+      encoding: 'base64',
+      contentType: a.contentType,
+      cid: a.id,
+    }));
 
     btn.disabled = true; const oldLabel = btn.textContent; btn.textContent = 'Sending…';
     try {
@@ -245,14 +501,17 @@ window.adminReady.then(async (ctx) => {
       const res = await fetch('/.netlify/functions/admin-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
-        body: JSON.stringify({ to, subject, text }),
+        body: JSON.stringify({ to, subject, text: mdText, html, attachments }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         ui.toast('Sent.', 'ok');
-        document.getElementById('cmp-body').value = '';
+        composer.body.value = '';
         document.getElementById('cmp-subject').value = '';
         document.getElementById('cmp-to').value = '';
+        composer.attachments = [];
+        renderAttachments();
+        renderPreview();
       } else {
         ui.toast(data.error || 'Send failed', 'err');
       }
