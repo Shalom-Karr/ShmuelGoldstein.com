@@ -2074,11 +2074,52 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 /* ===== STORIES PAGE ===== */
 .stories-section { padding-top: 5rem; }
 
+.story-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 2.5rem;
+}
+
+.story-chip {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid var(--line-fine);
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.story-chip:hover {
+  color: var(--terracotta);
+  border-color: var(--terracotta-soft);
+}
+
+.story-chip:focus-visible {
+  outline: 2px solid var(--terracotta);
+  outline-offset: 2px;
+}
+
+.story-chip.is-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
 .stories-grid {
   display: grid;
   gap: 1.75rem;
-  margin-top: 4rem;
+  margin-top: 2rem;
 }
+
+.stories-grid .quote-card.is-hidden { display: none; }
 
 @media (min-width: 980px) { .stories-grid { grid-template-columns: 1fr 1fr; } }
 

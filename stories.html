@@ -161,9 +161,10 @@
 <section class="section-ink stories-section">
   <div class="container">
     <p data-reveal style="font-style: italic; opacity: 0.75; text-align: center; max-width: 42rem; margin: 0 auto 2.5rem; font-size: 0.95rem;">Stories shared with permission. Names and identifying details are withheld to protect client confidentiality.</p>
+    <div class="story-filters" role="tablist" aria-label="Filter stories by coaching type"></div>
     <div class="stories-grid">
 
-      <div class="quote-card is-featured" data-reveal>
+      <div class="quote-card is-featured" data-reveal data-category="relationship">
         <span class="glyph">“</span>
         <blockquote>
           <p class="quote-lede"><strong>Two and a half years after starting, I can honestly say I am a different person.</strong> After 6 years of marriage, I was convinced that we needed marriage counseling—and that my husband needed therapy more than I did. He refused, so week after week I saw a well-known psychologist alone. I learned to vent very well, and to hide from my husband almost everything he didn't agree with. After 4 years, I'd had enough.</p>
@@ -180,7 +181,7 @@
         <cite>Relationship Coaching Client · Wife &amp; Mother</cite>
       </div>
 
-      <div class="quote-card" data-reveal data-reveal-delay="100">
+      <div class="quote-card" data-reveal data-reveal-delay="100" data-category="mens">
         <span class="glyph">“</span>
         <blockquote>I was hesitant about the idea of being "coached" at first, but Shmuel Goldstein immediately made me feel comfortable, more like guys talking comfortably than a "counselor/client" relationship. As a result of working with Shmuel, I've learned much about what it means to be a man in today's world and today's relationships, and how to integrate that into my daily life and business practices. He helped me find my inner sources of courage, enabling me to step into and live with both strength and gentleness—how to be a true "gentle-man." Worth the investment!</blockquote>
         <cite>Men's Coaching Client</cite>
@@ -189,6 +190,67 @@
     </div>
   </div>
 </section>
+
+<script>
+(function () {
+  var filters = document.querySelector('.story-filters');
+  var grid = document.querySelector('.stories-grid');
+  if (!filters || !grid) return;
+
+  var cards = Array.prototype.slice.call(grid.querySelectorAll('.quote-card[data-category]'));
+  if (!cards.length) return;
+
+  var labels = {
+    relationship: "Relationship",
+    mens: "Men's",
+    womens: "Women's",
+    group: "Group",
+    personal: "Personal",
+    couples: "Couples"
+  };
+
+  var cats = [];
+  cards.forEach(function (card) {
+    var c = (card.getAttribute('data-category') || '').trim().toLowerCase();
+    if (c && cats.indexOf(c) === -1) cats.push(c);
+  });
+
+  function label(c) {
+    if (labels[c]) return labels[c];
+    return c.charAt(0).toUpperCase() + c.slice(1);
+  }
+
+  function makeChip(value, text, isActive) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'story-chip' + (isActive ? ' is-active' : '');
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    btn.setAttribute('data-filter', value);
+    btn.textContent = text;
+    return btn;
+  }
+
+  filters.appendChild(makeChip('all', 'All', true));
+  cats.forEach(function (c) { filters.appendChild(makeChip(c, label(c), false)); });
+
+  filters.addEventListener('click', function (e) {
+    var btn = e.target.closest('.story-chip');
+    if (!btn) return;
+    var value = btn.getAttribute('data-filter');
+    filters.querySelectorAll('.story-chip').forEach(function (b) {
+      var active = b === btn;
+      b.classList.toggle('is-active', active);
+      b.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    cards.forEach(function (card) {
+      var cat = (card.getAttribute('data-category') || '').toLowerCase();
+      var show = value === 'all' || cat === value;
+      card.classList.toggle('is-hidden', !show);
+    });
+  });
+})();
+</script>
 
 
 <section class="cta-banner">
