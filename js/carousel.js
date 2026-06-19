@@ -6,16 +6,20 @@
 
   const swiperEl = root.querySelector('.testimonial-swiper');
   const wrapper  = swiperEl.querySelector('.swiper-wrapper');
-  const currentEl = root.querySelector('.counter-current');
-  const totalEl   = root.querySelector('.counter-total');
-  const fillEl    = root.querySelector('.counter-fill');
+  const currentEl   = root.querySelector('.counter-current');
+  const currentSrEl = root.querySelector('.counter-current-sr');
+  const totalEl     = root.querySelector('.counter-total');
+  const totalSrEl   = root.querySelector('.counter-total-sr');
+  const fillEl      = root.querySelector('.counter-fill');
 
   const init = (slidesCount) => {
     const updateProgress = (realIndex) => {
       if (currentEl) currentEl.textContent = String(realIndex + 1).padStart(2, '0');
+      if (currentSrEl) currentSrEl.textContent = String(realIndex + 1);
       if (fillEl) fillEl.style.transform = `scaleX(${(realIndex + 1) / slidesCount})`;
     };
     if (totalEl) totalEl.textContent = String(slidesCount).padStart(2, '0');
+    if (totalSrEl) totalSrEl.textContent = String(slidesCount);
 
     const swiper = new Swiper(swiperEl, {
       slidesPerView: 1,

@@ -201,7 +201,7 @@
       <a href="stories.html" class="text-link on-ink stories-header-link" data-reveal data-reveal-delay="200">Read all stories</a>
     </div>
 
-    <div class="testimonial-carousel" data-reveal data-reveal-delay="200">
+    <div class="testimonial-carousel" data-reveal data-reveal-delay="200" role="region" aria-roledescription="carousel" aria-label="Client testimonials">
       <div class="swiper testimonial-swiper">
         <div class="swiper-wrapper">
 
@@ -237,10 +237,14 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 6l-6 6 6 6"/></svg>
         </button>
 
-        <div class="carousel-progress">
-          <span class="counter-current">01</span>
-          <span class="counter-track"><span class="counter-fill"></span></span>
-          <span class="counter-total">04</span>
+        <div class="carousel-progress" aria-live="polite" aria-atomic="true">
+          <span class="hp">Story </span>
+          <span class="counter-current" aria-hidden="true">01</span>
+          <span class="hp counter-current-sr">1</span>
+          <span class="hp"> of </span>
+          <span class="counter-track" aria-hidden="true"><span class="counter-fill"></span></span>
+          <span class="counter-total" aria-hidden="true">04</span>
+          <span class="hp counter-total-sr">4</span>
         </div>
 
         <button class="carousel-btn carousel-next" aria-label="Next story">
