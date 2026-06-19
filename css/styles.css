@@ -916,6 +916,14 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
   letter-spacing: -0.005em;
 }
 
+.quote-card blockquote p {
+  margin: 0 0 1.1em;
+}
+
+.quote-card blockquote p:last-child {
+  margin-bottom: 0;
+}
+
 .quote-card cite {
   display: flex;
   align-items: center;
