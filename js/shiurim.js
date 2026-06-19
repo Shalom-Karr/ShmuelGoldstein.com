@@ -6,7 +6,10 @@
 
   const grid = document.getElementById('shiurim-grid');
   const empty = document.querySelector('.shiurim-empty');
+  const searchInput = document.getElementById('shiur-search');
   let filters = document.querySelectorAll('.shiurim-filter');
+  let activeTopic = 'all';
+  let activeQuery = '';
 
   // ----- helpers -----
   const escape = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
@@ -78,11 +81,23 @@
     </article>`;
   };
 
-  const applyFilter = (topic) => {
+  const applyFilter = (topic, query) => {
+    if (typeof topic === 'string') activeTopic = topic;
+    if (typeof query === 'string') activeQuery = query;
+    const q = activeQuery.trim().toLowerCase();
     const cards = Array.from(grid.querySelectorAll('.shiur-card'));
     let visible = 0;
     cards.forEach((card) => {
-      const match = topic === 'all' || card.dataset.topic === topic;
+      const topicMatch = activeTopic === 'all' || card.dataset.topic === activeTopic;
+      let queryMatch = true;
+      if (q) {
+        const h = card.querySelector('h3');
+        const p = card.querySelector('p');
+        const t = card.querySelector('.shiur-topic');
+        const hay = `${h ? h.textContent : ''} ${p ? p.textContent : ''} ${t ? t.textContent : ''}`.toLowerCase();
+        queryMatch = hay.indexOf(q) !== -1;
+      }
+      const match = topicMatch && queryMatch;
       card.hidden = !match;
       if (match) visible++;
     });
@@ -95,8 +110,18 @@
       btn.addEventListener('click', () => {
         filters.forEach((b) => b.classList.remove('is-active'));
         btn.classList.add('is-active');
-        applyFilter(btn.dataset.topic);
+        applyFilter(btn.dataset.topic, activeQuery);
       });
+    });
+  };
+
+  const wireSearch = () => {
+    if (!searchInput) return;
+    let timer = null;
+    searchInput.addEventListener('input', () => {
+      const val = searchInput.value;
+      clearTimeout(timer);
+      timer = setTimeout(() => applyFilter(activeTopic, val), 120);
     });
   };
 
@@ -190,6 +215,7 @@
   });
 
   wireFilters();
+  wireSearch();
   wireCards();
 
   // ----- Hydrate from Supabase -----
@@ -205,7 +231,7 @@
       grid.innerHTML = data.map(renderCard).join('');
       wireCards();
       const active = document.querySelector('.shiurim-filter.is-active');
-      applyFilter(active ? active.dataset.topic : 'all');
+      applyFilter(active ? active.dataset.topic : 'all', searchInput ? searchInput.value : '');
     })
     .catch(() => { /* keep static fallback */ });
 })();

@@ -104,12 +104,18 @@
 
 <section class="shiurim-section">
   <div class="container">
-    <div class="shiurim-filters" role="tablist" aria-label="Filter shiurim by topic" data-reveal>
-      <button class="shiurim-filter is-active" data-topic="all">All</button>
-      <button class="shiurim-filter" data-topic="parsha">Parsha</button>
-      <button class="shiurim-filter" data-topic="tefila">Tefila</button>
-      <button class="shiurim-filter" data-topic="halacha">Halacha</button>
-      <button class="shiurim-filter" data-topic="mussar">Mussar</button>
+    <div class="shiurim-toolbar" data-reveal>
+      <div class="shiurim-filters" role="tablist" aria-label="Filter shiurim by topic">
+        <button class="shiurim-filter is-active" data-topic="all">All</button>
+        <button class="shiurim-filter" data-topic="parsha">Parsha</button>
+        <button class="shiurim-filter" data-topic="tefila">Tefila</button>
+        <button class="shiurim-filter" data-topic="halacha">Halacha</button>
+        <button class="shiurim-filter" data-topic="mussar">Mussar</button>
+      </div>
+      <div class="shiurim-search">
+        <svg class="shiurim-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="shiur-search" class="shiurim-search-input" placeholder="Search shiurim…" aria-label="Search shiurim by title or description" autocomplete="off" />
+      </div>
     </div>
 
     <div class="shiurim-grid" id="shiurim-grid">

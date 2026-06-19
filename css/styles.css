@@ -1815,13 +1815,66 @@ section:has(+ .ornament) { padding-bottom: 1.5rem; }
 /* ===== SHIURIM PAGE ===== */
 .shiurim-section { padding: 4rem 0 7rem; }
 
+.shiurim-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 3.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--line-fine);
+}
+
 .shiurim-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
-  margin-bottom: 3.5rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--line-fine);
+}
+
+.shiurim-search {
+  position: relative;
+  flex: 1 1 240px;
+  max-width: 320px;
+}
+
+.shiurim-search-icon {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--ink-soft);
+  pointer-events: none;
+}
+
+.shiurim-search-input {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.55rem 1rem 0.55rem 2.35rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  transition: border-color 0.35s var(--ease), color 0.35s var(--ease);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.shiurim-search-input::placeholder {
+  color: var(--ink-soft);
+}
+
+.shiurim-search-input:focus {
+  outline: none;
+  border-color: var(--terracotta);
+}
+
+.shiurim-search-input:focus + .shiurim-search-icon,
+.shiurim-search:focus-within .shiurim-search-icon {
+  color: var(--terracotta);
 }
 
 .shiurim-filter {
