@@ -33,3 +33,6 @@ rabbi-outreach-email.txt
 rabbi-domain-followup-email.txt
 email sent.pdf
 *.pdf
+
+# IndexNow private stash — the public key.txt lives at the repo root
+.indexnow-key
