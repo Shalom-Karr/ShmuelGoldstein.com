@@ -7,12 +7,13 @@
   );
 
   const renderRows = (rows) => {
+    // No data-reveal here: main.js's IntersectionObserver only registers
+    // elements present at load, so late-inserted cards would stay at opacity 0.
     grid.innerHTML = rows.map((t, i) => {
       const cite = [t.attributed_to, t.role].filter(Boolean).join(' · ');
       const wide = i === 0 ? ' style="grid-column: 1 / -1;"' : '';
-      const delay = i === 0 ? '' : ` data-reveal-delay="${i * 100}"`;
       const bqStyle = i === 0 ? ' style="font-size: 1.2rem;"' : '';
-      return `<div class="quote-card"${wide} data-reveal${delay}>
+      return `<div class="quote-card"${wide}>
         <span class="glyph">"</span>
         <blockquote${bqStyle}>${escape(t.quote_text)}</blockquote>
         <cite>${escape(cite)}</cite>
@@ -31,6 +32,10 @@
     .then(({ data, error }) => {
       if (!error && Array.isArray(data) && data.length) {
         renderRows(data);
+        // Filter chips were built from the original cards, which the render
+        // above just replaced; DB rows carry no category, so drop the chips.
+        const filters = document.querySelector('.story-filters');
+        if (filters) filters.hidden = true;
       }
     })
     .catch(() => {});
