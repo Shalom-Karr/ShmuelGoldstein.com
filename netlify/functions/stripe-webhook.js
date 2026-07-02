@@ -160,9 +160,10 @@ async function handleBookingPaid(s) {
     'Content-Type': 'application/json',
   };
 
-  // status filter makes duplicate webhook deliveries no-ops
+  // status filter makes duplicate webhook deliveries no-ops. No embedded
+  // select on the write — a plain update, then look up the type name.
   const upd = await fetch(
-    `${SUPABASE_URL}/rest/v1/bookings?id=eq.${encodeURIComponent(bookingId)}&status=neq.paid&select=*,session_type:session_types(name)`,
+    `${SUPABASE_URL}/rest/v1/bookings?id=eq.${encodeURIComponent(bookingId)}&status=neq.paid`,
     {
       method: 'PATCH',
       headers: { ...headers, Prefer: 'return=representation' },
@@ -170,13 +171,27 @@ async function handleBookingPaid(s) {
     }
   );
   if (!upd.ok) {
-    console.error('booking paid update failed', upd.status, await upd.text());
-    return json(500, { error: 'Booking update failed' }); // 500 → Stripe retries
+    const detail = await upd.text();
+    console.error('booking paid update failed', upd.status, detail);
+    return json(500, { error: 'Booking update failed', status: upd.status, detail: detail.slice(0, 300) });
   }
   const rows = await upd.json();
   if (!rows.length) return json(200, { received: true, duplicate: true });
   const b = rows[0];
-  const typeName = (b.session_type && b.session_type.name) || 'Session with Rabbi Shmuel Goldstein';
+
+  let typeName = 'Session with Rabbi Shmuel Goldstein';
+  if (b.session_type_id) {
+    try {
+      const stRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/session_types?id=eq.${encodeURIComponent(b.session_type_id)}&select=name&limit=1`,
+        { headers }
+      );
+      if (stRes.ok) {
+        const st = (await stRes.json())[0];
+        if (st && st.name) typeName = st.name;
+      }
+    } catch { /* fall back to default name */ }
+  }
 
   let joinUrl = b.zoom_join_url;
   let passcode = b.zoom_password;
