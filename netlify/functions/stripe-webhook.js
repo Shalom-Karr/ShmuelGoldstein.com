@@ -32,6 +32,28 @@ exports.handler = async (event) => {
     return json(400, { error: 'Invalid signature' });
   }
 
+  // Abandoned checkout — release the slot hold right away instead of
+  // waiting out the 30-minute pending window.
+  if (evt.type === 'checkout.session.expired') {
+    const bid = evt.data.object.metadata && evt.data.object.metadata.booking_id;
+    if (bid) {
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/bookings?id=eq.${encodeURIComponent(bid)}&status=eq.pending`,
+        {
+          method: 'PATCH',
+          headers: {
+            apikey: SERVICE,
+            Authorization: `Bearer ${SERVICE}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal',
+          },
+          body: JSON.stringify({ status: 'expired' }),
+        }
+      );
+    }
+    return json(200, { received: true });
+  }
+
   if (evt.type !== 'checkout.session.completed' && evt.type !== 'checkout.session.async_payment_succeeded') {
     return json(200, { received: true });
   }
