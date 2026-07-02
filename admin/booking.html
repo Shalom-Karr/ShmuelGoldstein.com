@@ -69,6 +69,17 @@
       <h2>Upcoming bookings</h2>
       <div id="bookings-tbl" style="margin-top:1rem;">Loading…</div>
     </div>
+
+    <div class="admin-card">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+        <div>
+          <h2 style="margin:0;">Zoom auto-create</h2>
+          <p class="sub" style="margin:0.4rem 0 0;">Checks that paid bookings can auto-generate a Zoom meeting (link + passcode). Creates and deletes a throwaway meeting.</p>
+        </div>
+        <button class="admin-btn admin-btn--primary admin-btn--xs" id="zoom-test" type="button">Test Zoom connection</button>
+      </div>
+      <p id="zoom-test-result" style="margin:1rem 0 0; font-size:0.92rem;"></p>
+    </div>
   </main>
 </div>
 
@@ -267,6 +278,25 @@ window.adminReady.then(async (ctx) => {
 
   document.getElementById('new-type').addEventListener('click', () => openType());
   document.getElementById('new-rule').addEventListener('click', () => openRule());
+
+  document.getElementById('zoom-test').addEventListener('click', async (e) => {
+    const btn = e.target;
+    const out = document.getElementById('zoom-test-result');
+    btn.disabled = true; btn.textContent = 'Testing…'; out.textContent = '';
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      const res = await fetch('/.netlify/functions/admin-zoom-test', {
+        headers: { Authorization: 'Bearer ' + (session ? session.access_token : '') },
+      });
+      const data = await res.json().catch(() => ({}));
+      out.textContent = data.message || data.error || 'No response.';
+      out.style.color = data.ok ? 'var(--ok, #2e7d32)' : 'var(--err, #a33)';
+    } catch {
+      out.textContent = 'Network error running the test.';
+      out.style.color = 'var(--err, #a33)';
+    }
+    btn.disabled = false; btn.textContent = 'Test Zoom connection';
+  });
 
   loadTypes();
   loadRules();
