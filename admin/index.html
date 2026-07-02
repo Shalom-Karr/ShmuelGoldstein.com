@@ -87,6 +87,15 @@
     </div>
 
     <div class="admin-card">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+        <h2 style="margin:0;">Weekly availability</h2>
+        <button class="admin-btn admin-btn--primary admin-btn--xs" id="avail-add" type="button">+ Add window</button>
+      </div>
+      <p class="sub" style="margin:0.5rem 0 0;">When 1:1 sessions can be booked on <a href="/book" target="_blank"><code>/book</code></a>. Cleveland time; slots are offered every session-length inside a window.</p>
+      <div id="avail-tbl" style="margin-top:1rem;">Loading…</div>
+    </div>
+
+    <div class="admin-card">
       <h2>Latest subscribers</h2>
       <div id="latest-subs">Loading…</div>
     </div>
@@ -220,6 +229,70 @@ window.adminReady.then(async (ctx) => {
   document.getElementById('cal-next').addEventListener('click', () => { calCursor.setMonth(calCursor.getMonth() + 1); loadCalendar(); });
   document.getElementById('cal-today').addEventListener('click', () => { calCursor = new Date(); calCursor.setDate(1); loadCalendar(); });
   loadCalendar();
+
+  // ----- Weekly availability (same data as /admin/booking.html) -----
+  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const fmtRuleTime = (t) => {
+    const [h, m] = String(t).split(':').map(Number);
+    return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+  };
+
+  const loadAvail = async () => {
+    const { data, error } = await sb.from('availability_rules').select('*').order('day_of_week').order('start_time');
+    if (error) { document.getElementById('avail-tbl').innerHTML = `<p style="color:var(--err,#a33);">${ui.escape(error.message)} — has migration 0006 been run?</p>`; return; }
+    const rows = data || [];
+    document.getElementById('avail-tbl').innerHTML = !rows.length
+      ? '<div class="empty-state"><h3>No availability set</h3><p>Add a weekly window — e.g. Tuesday 9:00 AM – 9:30 AM.</p></div>'
+      : `<table class="admin-table">
+          <thead><tr><th>Day</th><th>From</th><th>Until</th><th style="width:100px"></th></tr></thead>
+          <tbody>${rows.map(r => `<tr data-id="${ui.escape(r.id)}">
+            <td><strong>${DAYS[r.day_of_week]}</strong></td>
+            <td>${fmtRuleTime(r.start_time)}</td>
+            <td>${fmtRuleTime(r.end_time)}</td>
+            <td class="row-actions"><button class="admin-btn admin-btn--danger admin-btn--xs" data-avail-del>Remove</button></td>
+          </tr>`).join('')}</tbody></table>`;
+
+    document.querySelectorAll('[data-avail-del]').forEach((b) => b.addEventListener('click', async (e) => {
+      const id = e.target.closest('tr').dataset.id;
+      if (!(await ui.confirm('Remove this availability window? Existing bookings are not affected.'))) return;
+      const { error: err } = await sb.from('availability_rules').delete().eq('id', id);
+      if (err) ui.toast(err.message, 'err'); else { ui.toast('Removed.'); loadAvail(); }
+    }));
+  };
+
+  document.getElementById('avail-add').addEventListener('click', () => {
+    const m = ui.openModal('Add availability window', `
+      <div class="admin-field">
+        <label for="r-day">Day of week</label>
+        <select id="r-day" class="admin-select">${DAYS.map((d, i) => `<option value="${i}">${d}</option>`).join('')}</select>
+      </div>
+      <div class="admin-grid-2">
+        <div class="admin-field">
+          <label for="r-start">From (Cleveland time)</label>
+          <input id="r-start" class="admin-input" type="time" value="09:00" required />
+        </div>
+        <div class="admin-field">
+          <label for="r-end">Until</label>
+          <input id="r-end" class="admin-input" type="time" value="09:30" required />
+        </div>
+      </div>`, { submitLabel: 'Add window' });
+    m.submit.addEventListener('click', async () => {
+      const payload = {
+        day_of_week: parseInt(m.body.querySelector('#r-day').value, 10),
+        start_time: m.body.querySelector('#r-start').value,
+        end_time: m.body.querySelector('#r-end').value,
+      };
+      if (!payload.start_time || !payload.end_time || payload.end_time <= payload.start_time) {
+        ui.toast('End time must be after start time.', 'err'); return;
+      }
+      m.submit.disabled = true;
+      const { error } = await sb.from('availability_rules').insert(payload);
+      m.submit.disabled = false;
+      if (error) ui.toast(error.message, 'err');
+      else { ui.toast('Added.'); m.close(); loadAvail(); }
+    });
+  });
+  loadAvail();
 
   const counts = await Promise.all([
     sb.from('testimonials').select('id', { count: 'exact', head: true }).eq('published', true).eq('featured', true),
