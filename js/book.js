@@ -120,30 +120,37 @@
       </button>`).join('');
     typeCards.querySelectorAll('.type-card').forEach((card) => card.addEventListener('click', () => {
       selectedType = types.find((t) => t.id === card.dataset.typeId);
+      selectedDayKey = null;
+      calCursor = null;
+      computeSlots();
       renderTypes();
       renderSlots();
     }));
   };
 
-  // ---- slots ----
+  // ---- slots: month calendar (mirrors the admin dashboard calendar) ----
   const overlapsBooked = (startMs, endMs) => booked.some((b) => {
     const s = new Date(b.starts_at).getTime();
     const e = s + (b.duration_minutes || 60) * 60000;
     return s < endMs && e > startMs;
   });
 
-  const renderSlots = () => {
-    if (!selectedType) { slotsEl.innerHTML = '<p style="color: var(--ink-soft);">Choose a session above to see open times.</p>'; return; }
-    if (!rules.length) { slotsEl.innerHTML = '<p style="color: var(--ink-soft);">No open times are posted right now — email <a href="mailto:rabbi@shmuelgoldstein.com">rabbi@shmuelgoldstein.com</a> and we\'ll find one.</p>'; return; }
+  let slotsByDay = {};       // local YYYY-MM-DD -> [Date, ...]
+  let calCursor = null;      // first-of-month being displayed
+  let selectedDayKey = null;
 
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const dayKeyLocal = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+  const computeSlots = () => {
+    slotsByDay = {};
+    if (!selectedType) return;
     const dur = selectedType.duration_minutes;
     const now = Date.now();
-    const days = [];
     for (let i = 0; i < DAYS_AHEAD; i++) {
       const probe = new Date(now + i * 864e5);
       probe.setUTCHours(12, 0, 0, 0); // noon UTC = same NY calendar date year-round
       const { y, m, d, dow } = nyDateParts(probe);
-      const daySlots = [];
       rules.filter((r) => r.day_of_week === dow).forEach((r) => {
         const start = timeToMin(r.start_time);
         const end = timeToMin(r.end_time);
@@ -152,28 +159,91 @@
           const ms = slot.getTime();
           if (ms < now + LEAD_MS) continue;
           if (overlapsBooked(ms, ms + dur * 60000)) continue;
-          daySlots.push(slot);
+          const k = dayKeyLocal(slot);
+          (slotsByDay[k] = slotsByDay[k] || []).push(slot);
         }
       });
-      if (daySlots.length) days.push({ label: daySlots[0], slots: daySlots });
     }
+    Object.values(slotsByDay).forEach((list) => list.sort((a, b) => a - b));
+  };
 
-    if (!days.length) {
+  const monthOf = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
+  const sameMonth = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+
+  const renderSlots = () => {
+    if (!selectedType) { slotsEl.innerHTML = '<p style="color: var(--ink-soft);">Choose a session above to see open times.</p>'; return; }
+    if (!rules.length) { slotsEl.innerHTML = '<p style="color: var(--ink-soft);">No open times are posted right now — email <a href="mailto:rabbi@shmuelgoldstein.com">rabbi@shmuelgoldstein.com</a> and we\'ll find one.</p>'; return; }
+
+    const keys = Object.keys(slotsByDay).sort();
+    if (!keys.length) {
       slotsEl.innerHTML = '<p style="color: var(--ink-soft);">Everything in the next four weeks is taken. Email <a href="mailto:rabbi@shmuelgoldstein.com">rabbi@shmuelgoldstein.com</a> and we\'ll find a time.</p>';
       return;
     }
 
-    slotsEl.innerHTML = days.map((day) => {
-      const heading = day.label.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-      return `<div class="book-day">
-        <h4>${esc(heading)}</h4>
-        <div class="slot-row">
-          ${day.slots.map((s) => `<button type="button" class="slot-btn" data-iso="${s.toISOString()}">${s.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</button>`).join('')}
-        </div>
-      </div>`;
-    }).join('');
+    if (!selectedDayKey || !slotsByDay[selectedDayKey]) selectedDayKey = keys[0];
+    if (!calCursor) calCursor = monthOf(slotsByDay[selectedDayKey][0]);
 
-    slotsEl.querySelectorAll('.slot-btn').forEach((btn) => btn.addEventListener('click', () => bookSlot(btn)));
+    const firstMonth = monthOf(new Date());
+    const lastMonth = monthOf(slotsByDay[keys[keys.length - 1]][0]);
+
+    slotsEl.innerHTML = `
+      <div class="bcal">
+        <div class="bcal-head">
+          <button type="button" class="bcal-nav" id="bcal-prev" aria-label="Previous month" ${sameMonth(calCursor, firstMonth) || calCursor < firstMonth ? 'disabled' : ''}>‹</button>
+          <span class="bcal-label">${calCursor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+          <button type="button" class="bcal-nav" id="bcal-next" aria-label="Next month" ${sameMonth(calCursor, lastMonth) || calCursor > lastMonth ? 'disabled' : ''}>›</button>
+        </div>
+        <div class="bcal-grid">
+          ${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d) => `<div class="bcal-dow">${d}</div>`).join('')}
+          ${(() => {
+            const cells = [];
+            const gridStart = new Date(calCursor);
+            gridStart.setDate(1 - gridStart.getDay());
+            const todayKey = dayKeyLocal(new Date());
+            for (let i = 0; i < 42; i++) {
+              const d = new Date(gridStart);
+              d.setDate(gridStart.getDate() + i);
+              const k = dayKeyLocal(d);
+              if (d.getMonth() !== calCursor.getMonth()) { cells.push('<button type="button" class="bcal-day bcal-day--other" tabindex="-1"></button>'); continue; }
+              const cls = ['bcal-day'];
+              if (slotsByDay[k]) cls.push('bcal-day--avail');
+              if (k === selectedDayKey) cls.push('bcal-day--selected');
+              if (k === todayKey) cls.push('bcal-day--today');
+              cells.push(`<button type="button" class="${cls.join(' ')}" data-day="${k}" ${slotsByDay[k] ? '' : 'disabled'}>${d.getDate()}</button>`);
+            }
+            return cells.join('');
+          })()}
+        </div>
+      </div>
+      <div id="day-times"></div>`;
+
+    document.getElementById('bcal-prev').addEventListener('click', () => {
+      calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() - 1, 1);
+      renderSlots();
+    });
+    document.getElementById('bcal-next').addEventListener('click', () => {
+      calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + 1, 1);
+      renderSlots();
+    });
+    slotsEl.querySelectorAll('.bcal-day--avail').forEach((btn) => btn.addEventListener('click', () => {
+      selectedDayKey = btn.getAttribute('data-day');
+      renderSlots();
+    }));
+
+    renderDayTimes();
+  };
+
+  const renderDayTimes = () => {
+    const wrap = document.getElementById('day-times');
+    const daySlots = slotsByDay[selectedDayKey];
+    if (!wrap || !daySlots) { if (wrap) wrap.innerHTML = ''; return; }
+    const heading = daySlots[0].toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    wrap.innerHTML = `
+      <h4>${esc(heading)}</h4>
+      <div class="slot-row">
+        ${daySlots.map((s) => `<button type="button" class="slot-btn" data-iso="${s.toISOString()}">${s.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</button>`).join('')}
+      </div>`;
+    wrap.querySelectorAll('.slot-btn').forEach((btn) => btn.addEventListener('click', () => bookSlot(btn)));
   };
 
   const bookSlot = async (btn) => {
@@ -231,6 +301,7 @@
     booked = bookedRes.data || [];
 
     if (types.length === 1) selectedType = types[0];
+    computeSlots();
     renderTypes();
     renderSlots();
     loadMine();

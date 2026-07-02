@@ -23,11 +23,24 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <style>
-    .book-day { margin-bottom: 1.5rem; }
-    .book-day h4 { margin: 0 0 0.6rem; font-size: 1rem; }
-    .slot-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .slot-btn { border: 1px solid var(--line-fine, #ddd4c5); background: var(--paper, #fffaf2); border-radius: 8px; padding: 0.5rem 0.9rem; font-size: 0.9rem; cursor: pointer; }
+    .slot-row { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+    .slot-btn { border: 1px solid var(--line-fine, #ddd4c5); background: var(--paper, #fffaf2); border-radius: 8px; padding: 0.55rem 1rem; font-size: 0.95rem; cursor: pointer; }
     .slot-btn:hover { border-color: #b85c1f; color: #b85c1f; }
+    .bcal { max-width: 440px; margin: 0 auto; border: 1px solid var(--line-fine, #ddd4c5); background: var(--paper, #fffaf2); border-radius: 16px; padding: 1.25rem; }
+    .bcal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; }
+    .bcal-label { font-weight: 600; font-size: 1.05rem; }
+    .bcal-nav { border: 1px solid var(--line-fine, #ddd4c5); background: transparent; border-radius: 8px; width: 34px; height: 34px; font-size: 1.1rem; cursor: pointer; line-height: 1; }
+    .bcal-nav:disabled { opacity: 0.3; cursor: default; }
+    .bcal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .bcal-dow { text-align: center; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft, #8a8177); padding: 4px 0; }
+    .bcal-day { position: relative; aspect-ratio: 1; border: 0; background: transparent; border-radius: 50%; font-size: 0.92rem; color: var(--ink-soft, #8a8177); cursor: default; }
+    .bcal-day--avail { background: rgba(184, 92, 31, 0.12); color: #b85c1f; font-weight: 600; cursor: pointer; }
+    .bcal-day--avail:hover { background: rgba(184, 92, 31, 0.24); }
+    .bcal-day--selected, .bcal-day--selected:hover { background: #b85c1f; color: #fff; }
+    .bcal-day--today::after { content: ''; position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+    .bcal-day--other { visibility: hidden; }
+    #day-times { max-width: 440px; margin: 1.5rem auto 0; }
+    #day-times h4 { margin: 0 0 0.9rem; font-size: 1rem; text-align: center; }
     .type-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin: 2rem 0; }
     .type-card { text-align: left; border: 1px solid var(--line-fine, #ddd4c5); background: var(--paper, #fffaf2); border-radius: 14px; padding: 1.25rem; cursor: pointer; }
     .type-card.is-selected { border-color: #b85c1f; box-shadow: 0 0 0 1px #b85c1f; }
@@ -104,8 +117,10 @@
 
     <span class="eyebrow">Step 2</span>
     <h2 class="section-heading" style="margin-bottom: 1.5rem;">Pick a <span class="accent">time.</span></h2>
-    <p class="section-lead" style="margin-bottom: 2rem;">Times are shown in your local time zone.</p>
-    <div id="slots" style="text-align: left;"><p style="color: var(--ink-soft);">Choose a session above to see open times.</p></div>
+    <p class="section-lead" style="margin-bottom: 2rem;">Highlighted days have open times, shown in your local time zone.</p>
+    <div id="slots">
+      <p style="color: var(--ink-soft);">Choose a session above to see open times.</p>
+    </div>
     <p class="form-msg" id="book-msg" aria-live="polite" style="margin-top: 1rem;"></p>
   </div>
 </section>
