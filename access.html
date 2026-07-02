@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Your Event Access — Rabbi Shmuel Goldstein</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="/assets/favicons/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicons/favicon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicons/apple-touch-icon.png" />
+  <link rel="manifest" href="/assets/favicons/site.webmanifest" />
+  <meta name="theme-color" content="#b85c1f" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="container nav-row">
+    <a href="index.html" class="brand">
+      <span class="monogram">SG</span>
+      <span class="wordmark">Shmuel <span class="amp">·</span> Goldstein</span>
+    </a>
+    <nav class="primary-nav">
+      <a href="coaching.html">Coaching</a>
+      <a href="approach.html">Approach</a>
+      <a href="about.html">About</a>
+      <a href="shiurim.html">Shiurim</a>
+      <a href="stories.html">Stories</a>
+      <a href="lets-talk.html" class="nav-cta">Let's talk</a>
+    </nav>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
+      <svg class="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M3 12h18M3 18h18"/></svg><svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M6 18L18 6"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="mobile-drawer">
+  <a href="coaching.html">Coaching</a>
+  <a href="approach.html">Approach</a>
+  <a href="about.html">About</a>
+  <a href="shiurim.html">Shiurim</a>
+  <a href="stories.html">Stories</a>
+  <a href="lets-talk.html">Let's talk</a>
+</div>
+
+<main id="main" tabindex="-1">
+
+<section>
+  <div class="container-narrow">
+    <div class="calendly-wrap" id="access-card">
+      <span class="eyebrow">Your Seat Is Reserved</span>
+      <h3 style="margin-top: 0.75rem;" id="access-title">Loading your access details…</h3>
+      <div id="access-body">
+        <p>One moment — confirming your reservation.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-bottom">
+      <span class="brand">
+        <span class="monogram on-ink">SG</span>
+        <span>Rabbi Shmuel Goldstein</span>
+      </span>
+      <span>© <span data-year></span> All rights reserved.</span>
+      <span>Coaching rooted in Torah.</span>
+      <span class="built-by">Built by <a href="https://github.com/Shalom-Karr" target="_blank" rel="noopener">Shalom Karr</a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js" defer></script>
+<script>
+(function () {
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  };
+
+  var title = document.getElementById('access-title');
+  var body = document.getElementById('access-body');
+
+  var fail = function (msg) {
+    title.textContent = 'We couldn’t find that reservation';
+    body.innerHTML = '<p>' + esc(msg) + '</p>' +
+      '<p>If you just paid, give it a minute and refresh. Still stuck? Email ' +
+      '<a href="mailto:rabbi@shmuelgoldstein.com">rabbi@shmuelgoldstein.com</a> and we’ll sort it out.</p>';
+  };
+
+  var params = new URLSearchParams(location.search);
+  var sessionId = params.get('session_id') || '';
+  if (!sessionId) { fail('This page needs the link from your confirmation email or checkout redirect.'); return; }
+
+  var pad = function (n) { return String(n).padStart(2, '0'); };
+  var icsStamp = function (d) {
+    return d.getUTCFullYear() + pad(d.getUTCMonth() + 1) + pad(d.getUTCDate()) + 'T' +
+      pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + pad(d.getUTCSeconds()) + 'Z';
+  };
+
+  var buildIcs = function (ev) {
+    var start = new Date(ev.starts_at);
+    var end = new Date(start.getTime() + (ev.duration_minutes || 60) * 60000);
+    var lines = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//shmuelgoldstein.com//events//EN',
+      'BEGIN:VEVENT',
+      'UID:' + sessionId + '@shmuelgoldstein.com',
+      'DTSTAMP:' + icsStamp(new Date()),
+      'DTSTART:' + icsStamp(start),
+      'DTEND:' + icsStamp(end),
+      'SUMMARY:' + String(ev.title || 'Session with Rabbi Shmuel Goldstein').replace(/[\n,;]/g, ' '),
+      ev.zoom_join_url ? 'LOCATION:' + ev.zoom_join_url : 'LOCATION:Zoom',
+      ev.zoom_join_url ? 'DESCRIPTION:Join: ' + ev.zoom_join_url + (ev.zoom_password ? ' \\nPasscode: ' + ev.zoom_password : '') : '',
+      'END:VEVENT', 'END:VCALENDAR',
+    ].filter(Boolean);
+    return lines.join('\r\n');
+  };
+
+  fetch('/api/event-access?session_id=' + encodeURIComponent(sessionId))
+    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+    .then(function (res) {
+      if (!res.ok) { fail(res.d.error || 'Reservation lookup failed.'); return; }
+      var ev = res.d.event;
+      if (!ev) { fail('Your payment is recorded, but the event details are unavailable.'); return; }
+
+      title.textContent = ev.title;
+      var when = new Date(ev.starts_at).toLocaleString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+        hour: 'numeric', minute: '2-digit',
+      });
+
+      var html = '<p><strong style="color: var(--ink);">' + esc(when) + '</strong> · ' + esc(String(ev.duration_minutes || 60)) + ' minutes · Zoom</p>';
+      if (ev.zoom_join_url) {
+        html += '<p style="margin-top: 1.5rem;"><a class="btn btn-primary" href="' + esc(ev.zoom_join_url) + '" target="_blank" rel="noopener">Join the Zoom session</a></p>';
+        if (ev.zoom_password) html += '<p style="margin-top: 0.75rem;">Passcode: <strong>' + esc(ev.zoom_password) + '</strong></p>';
+      } else {
+        html += '<p style="margin-top: 1.5rem;">The Zoom link will be emailed to you before the session.</p>';
+      }
+      html += '<p style="margin-top: 1.5rem;"><a href="#" id="ics-link" class="text-link">Add to calendar (.ics)</a></p>';
+      html += '<p style="margin-top: 1rem; font-size: 0.95rem;">A confirmation was sent to <strong>' + esc(res.d.email) + '</strong>. Keep this page’s link — it’s your ticket.</p>';
+      body.innerHTML = html;
+
+      document.getElementById('ics-link').addEventListener('click', function (e) {
+        e.preventDefault();
+        var blob = new Blob([buildIcs(ev)], { type: 'text/calendar' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'event.ics';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      });
+    })
+    .catch(function () { fail('Network error — please refresh.'); });
+})();
+</script>
+</body>
+</html>

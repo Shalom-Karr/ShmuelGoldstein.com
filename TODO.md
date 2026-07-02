@@ -45,11 +45,15 @@ Note: every canonical URL, OG tag, and JSON-LD entry already references `https:/
 - [ ] (Optional) Hero copy on each page hydrates from `pages` table by slug
 
 ### 3c. Stripe Checkout + Events page
-- [ ] Build `netlify/functions/stripe-webhook.js` — verify signature, write to `purchases`, send confirmation via SMTP
-- [ ] Build `netlify/functions/create-checkout-session.js` — mints Stripe Checkout from `events.stripe_price_id`
-- [ ] Build `events.html` — fetch upcoming events, "Reserve a seat — $X" buttons
-- [ ] Build `access.html` — reads `?session_id=`, calls `/api/event-access`, shows Zoom link + password + `.ics` download
-- [ ] Configure Stripe webhook endpoint in Stripe dashboard
+- [x] Build `netlify/functions/stripe-webhook.js` — verify signature, write to `purchases`, send confirmation via SMTP
+- [x] Build `netlify/functions/create-checkout-session.js` — mints Stripe Checkout from `events.stripe_price_id` (falls back to inline `price_data` from `price_cents`)
+- [x] Build `netlify/functions/event-access.js` — gates Zoom details by `stripe_session_id`
+- [x] Build `events.html` — fetch upcoming events, "Reserve a seat — $X" buttons
+- [x] Build `access.html` — reads `?session_id=`, calls `/api/event-access`, shows Zoom link + password + `.ics` download
+- [x] `/api/*` redirect + `/events` + `/access` routes in netlify.toml; `/access` is noindex/no-store
+- [x] Migration `0005_events_zoom_column_privs.sql` — anon can no longer select `zoom_join_url`/`zoom_password` (**run it in the Supabase SQL editor**)
+- [ ] Set `STRIPE_SECRET_KEY` in Netlify env (roll the key first — it was exposed in chat)
+- [ ] Add webhook endpoint in Stripe dashboard → `https://shmuelgoldstein.com/api/stripe-webhook` (event: `checkout.session.completed`) → set `STRIPE_WEBHOOK_SECRET` in Netlify env
 - [ ] Test full sale flow in test mode end-to-end before flipping to live keys
 
 ### 3d. Reminder cron

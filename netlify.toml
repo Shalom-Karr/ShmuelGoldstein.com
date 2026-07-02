@@ -28,6 +28,13 @@
     # tracking pixel can't read cookies or run JS — just hits its origin once.
     Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' https://*.supabase.co https:; frame-src 'self'; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net; form-action 'self'; base-uri 'self'; frame-ancestors 'self'; object-src 'none'"
 
+# Purchase access page — personal Zoom credentials; never index or cache
+[[headers]]
+  for = "/access*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    Cache-Control = "no-store"
+
 [[headers]]
   for = "/assets/*"
   [headers.values]
@@ -96,6 +103,21 @@
 [[redirects]]
   from = "/thank-you"
   to = "/thank-you.html"
+  status = 200
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/events"
+  to = "/events.html"
+  status = 200
+
+[[redirects]]
+  from = "/access"
+  to = "/access.html"
   status = 200
 
 # Catch-all 404 — must be the LAST redirect rule
