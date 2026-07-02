@@ -73,6 +73,30 @@
     btn.textContent = original;
   });
 
+  const form = document.querySelector('.find-session-form');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = form.querySelector('input[name="email"]');
+      const btn = form.querySelector('button');
+      const msg = document.querySelector('.find-session-msg');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/resend-access', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: input.value }),
+        });
+        const data = await res.json().catch(() => ({}));
+        msg.textContent = data.message || data.error || 'Check your inbox.';
+        if (res.ok) input.value = '';
+      } catch {
+        msg.textContent = 'Network error — please try again.';
+      }
+      btn.disabled = false;
+    });
+  }
+
   const sb = typeof window.getSupabase === 'function' ? window.getSupabase() : null;
   if (!sb) { renderEmpty(); return; }
 

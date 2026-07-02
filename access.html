@@ -93,6 +93,7 @@
   var fail = function (msg) {
     title.textContent = 'We couldn’t find that reservation';
     body.innerHTML = '<p>' + esc(msg) + '</p>' +
+      '<p>Lost your link? <a href="/events#find-session">Get it re-sent to your email</a>.</p>' +
       '<p>If you just paid, give it a minute and refresh. Still stuck? Email ' +
       '<a href="mailto:rabbi@shmuelgoldstein.com">rabbi@shmuelgoldstein.com</a> and we’ll sort it out.</p>';
   };
