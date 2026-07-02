@@ -38,7 +38,30 @@ exports.handler = async (event) => {
     return json(200, GENERIC); // don't leak backend state either
   }
   const rows = (await res.json()).filter((r) => r.event);
-  if (!rows.length) return json(200, GENERIC);
+  if (!rows.length) {
+    // Still email the address — only the inbox owner sees it, and it saves a
+    // confused buyer (typo'd email, different address) from waiting on nothing.
+    try {
+      await sendMail({
+        to: email,
+        subject: 'No reservation found under this email',
+        text: `Sholom,
+
+Someone (hopefully you) asked us to re-send session access links for this email address, but we don't have any current or upcoming reservations under it.
+
+If you booked with a different email, try that one at https://shmuelgoldstein.com/events#find-session — or reply to this email and we'll track it down.
+
+If this wasn't you, you can safely ignore this message.
+
+— Rabbi Shmuel Goldstein
+shmuelgoldstein.com`,
+        html: noReservationHtml(),
+      });
+    } catch (err) {
+      console.error('no-reservation email failed', err && err.message);
+    }
+    return json(200, GENERIC);
+  }
 
   const links = rows.map((r) => ({
     title: r.event.title,
@@ -91,6 +114,24 @@ function linksHtml(name, links) {
         <p style="margin:0 0 18px;color:#7c5a2e;letter-spacing:0.12em;font-size:12px;text-transform:uppercase;">Your Sessions</p>
         <p style="margin:0 0 16px;">Sholom${name ? ' ' + esc(name) : ''},</p>
         ${items}
+        <p style="margin:24px 0 0;line-height:1.55;">— Rabbi Shmuel Goldstein</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table></body></html>`;
+}
+
+function noReservationHtml() {
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#f5f1ea;font-family:Georgia,serif;color:#1f1a14;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f5f1ea;padding:32px 16px;">
+  <tr><td align="center">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560" style="max-width:560px;background:#fffaf2;border:1px solid #e6dccb;border-radius:8px;padding:36px 32px;">
+      <tr><td>
+        <p style="margin:0 0 18px;color:#7c5a2e;letter-spacing:0.12em;font-size:12px;text-transform:uppercase;">Session Lookup</p>
+        <h1 style="margin:0 0 16px;font-size:22px;line-height:1.25;">No reservation found under this email</h1>
+        <p style="margin:0 0 14px;line-height:1.55;">Someone (hopefully you) asked us to re-send session access links for this address, but we don't have any current or upcoming reservations under it.</p>
+        <p style="margin:0 0 14px;line-height:1.55;">If you booked with a different email, <a href="https://shmuelgoldstein.com/events#find-session" style="color:#b85c1f;">try that one here</a> — or just reply to this email and we'll track it down.</p>
+        <p style="margin:0 0 14px;line-height:1.55;color:#555;">If this wasn't you, you can safely ignore this message.</p>
         <p style="margin:24px 0 0;line-height:1.55;">— Rabbi Shmuel Goldstein</p>
       </td></tr>
     </table>

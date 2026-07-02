@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Events — Admin</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" href="/assets/favicons/favicon.ico" />
+  <link rel="stylesheet" href="/admin/_shared/admin.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="/js/config.js" defer></script>
+  <script src="/admin/_shared/ui.js" defer></script>
+  <script src="/admin/_shared/auth.js" defer></script>
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <a class="admin-brand" href="/admin/">
+      <span class="monogram">SG</span>
+      <span class="admin-brand-text">Admin <small>shmuelgoldstein.com</small></span>
+    </a>
+    <nav class="admin-nav">
+      <a href="/admin/">Dashboard</a>
+      <a href="/admin/testimonials.html">Testimonials</a>
+      <a href="/admin/events.html" class="is-active">Events</a>
+      <a href="/admin/shiurim.html">Shiurim</a>
+      <a href="/admin/subscribers.html">Subscribers</a>
+      <a href="/admin/messages.html">Messages</a>
+      <a href="/admin/email.html">Email</a>
+      <a href="/admin/analytics.html">Analytics</a>
+      <a href="/" target="_blank">View site ↗</a>
+    </nav>
+    <div class="admin-identity">
+      <span class="role">Signed in</span>
+      <span class="who" data-admin-identity>—</span>
+      <button class="admin-btn admin-btn--ghost admin-btn--xs" data-admin-logout type="button">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-head">
+      <div>
+        <h1>Events</h1>
+        <p class="sub">Paid live sessions sold on <code>/events</code>. Creating an event can auto-provision the Zoom meeting and Stripe price.</p>
+      </div>
+      <button class="admin-btn admin-btn--primary" id="new-btn" type="button">+ New event</button>
+    </div>
+
+    <div id="tbl">Loading…</div>
+  </main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+window.adminReady.then(async (ctx) => {
+  if (!ctx) return;
+  const { sb } = ctx;
+  const ui = window.adminUI;
+
+  async function token() {
+    const { data: { session } } = await sb.auth.getSession();
+    return session ? session.access_token : null;
+  }
+
+  const fmtWhen = (iso) => new Date(iso).toLocaleString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+  });
+  const fmtPrice = (c) => '$' + (c / 100).toFixed(2).replace(/\.00$/, '');
+  const toLocalInput = (iso) => {
+    const d = iso ? new Date(iso) : new Date(Date.now() + 7 * 864e5);
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+
+  const fetchAll = async () => {
+    const [evRes, pRes] = await Promise.all([
+      sb.from('events').select('*').order('starts_at', { ascending: false }),
+      sb.from('purchases').select('event_id'),
+    ]);
+    if (evRes.error) { ui.toast('Failed to load: ' + evRes.error.message, 'err'); return { rows: [], sold: {} }; }
+    const sold = {};
+    (pRes.data || []).forEach((p) => { if (p.event_id) sold[p.event_id] = (sold[p.event_id] || 0) + 1; });
+    return { rows: evRes.data || [], sold };
+  };
+
+  const STATUS_PILL = {
+    upcoming: '<span class="admin-pill admin-pill--ok">Upcoming</span>',
+    draft: '<span class="admin-pill admin-pill--muted">Draft</span>',
+    live: '<span class="admin-pill">Live</span>',
+    past: '<span class="admin-pill admin-pill--muted">Past</span>',
+    cancelled: '<span class="admin-pill admin-pill--muted">Cancelled</span>',
+  };
+
+  const render = ({ rows, sold }) => {
+    if (!rows.length) {
+      document.getElementById('tbl').innerHTML = '<div class="empty-state"><h3>No events yet</h3><p>Click "New event" to create the first one.</p></div>';
+      return;
+    }
+    document.getElementById('tbl').innerHTML = `
+      <table class="admin-table">
+        <thead><tr>
+          <th>When</th>
+          <th>Event</th>
+          <th>Price</th>
+          <th>Seats</th>
+          <th>Zoom</th>
+          <th>Status</th>
+          <th style="width: 180px"></th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => `<tr data-id="${ui.escape(r.id)}">
+            <td style="white-space:nowrap;">${fmtWhen(r.starts_at)}</td>
+            <td><strong>${ui.escape(r.title)}</strong><br/><small style="color:var(--ink-muted);"><code>${ui.escape(r.slug)}</code>${r.stripe_price_id ? ' · stripe price ✓' : ''}</small></td>
+            <td>${fmtPrice(r.price_cents)}</td>
+            <td>${sold[r.id] || 0}${r.capacity ? ' / ' + r.capacity : ''}</td>
+            <td>${r.zoom_join_url ? '✓' : '—'}</td>
+            <td>${STATUS_PILL[r.status] || ui.escape(r.status)}</td>
+            <td class="row-actions">
+              <button class="admin-btn admin-btn--ghost admin-btn--xs" data-edit>Edit</button>
+              <button class="admin-btn admin-btn--danger admin-btn--xs" data-del>Delete</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+    document.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', (e) => openEdit(rows.find(r => r.id === e.target.closest('tr').dataset.id))));
+    document.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async (e) => {
+      const row = rows.find(r => r.id === e.target.closest('tr').dataset.id);
+      const count = sold[row.id] || 0;
+      if (count > 0) {
+        ui.toast(`${count} seat(s) sold — set status to Cancelled instead of deleting, so buyers keep their records.`, 'err');
+        return;
+      }
+      if (!(await ui.confirm(`Delete "${row.title}"?`))) return;
+      const { error } = await sb.from('events').delete().eq('id', row.id);
+      if (error) ui.toast(error.message, 'err'); else { ui.toast('Deleted.'); refresh(); }
+    }));
+  };
+
+  const sharedFields = (row) => `
+    <div class="admin-field">
+      <label for="f-title">Title *</label>
+      <input id="f-title" class="admin-input" required value="${ui.escape(row?.title || '')}" placeholder="e.g. Elegance Under Pressure — live workshop" />
+    </div>
+    <div class="admin-field">
+      <label for="f-desc">Description</label>
+      <textarea id="f-desc" class="admin-textarea" rows="3">${ui.escape(row?.description || '')}</textarea>
+    </div>
+    <div class="admin-grid-2">
+      <div class="admin-field">
+        <label for="f-starts">Starts *</label>
+        <input id="f-starts" class="admin-input" type="datetime-local" required value="${toLocalInput(row?.starts_at)}" />
+      </div>
+      <div class="admin-field">
+        <label for="f-duration">Duration (minutes)</label>
+        <input id="f-duration" class="admin-input" type="number" min="15" step="15" value="${row?.duration_minutes ?? 90}" />
+      </div>
+    </div>
+    <div class="admin-grid-2">
+      <div class="admin-field">
+        <label for="f-price">Price (USD) *</label>
+        <input id="f-price" class="admin-input" type="number" min="0.50" step="0.01" required value="${row ? (row.price_cents / 100).toFixed(2) : ''}" placeholder="18.00" />
+      </div>
+      <div class="admin-field">
+        <label for="f-capacity">Capacity (blank = unlimited)</label>
+        <input id="f-capacity" class="admin-input" type="number" min="1" value="${row?.capacity ?? ''}" />
+      </div>
+    </div>`;
+
+  const readShared = (m) => {
+    const title = m.body.querySelector('#f-title').value.trim();
+    const startsRaw = m.body.querySelector('#f-starts').value;
+    const price = Math.round(parseFloat(m.body.querySelector('#f-price').value) * 100);
+    if (!title || !startsRaw || !Number.isInteger(price)) {
+      ui.toast('Title, start time, and price are required.', 'err');
+      return null;
+    }
+    return {
+      title,
+      description: m.body.querySelector('#f-desc').value.trim() || null,
+      starts_at: new Date(startsRaw).toISOString(),
+      duration_minutes: parseInt(m.body.querySelector('#f-duration').value, 10) || 90,
+      price_cents: price,
+      capacity: m.body.querySelector('#f-capacity').value ? parseInt(m.body.querySelector('#f-capacity').value, 10) : null,
+    };
+  };
+
+  const openNew = () => {
+    const body = `${sharedFields(null)}
+      <div class="admin-field">
+        <label class="admin-checkbox"><input type="checkbox" id="f-zoom" checked /><span>Create the Zoom meeting automatically</span></label>
+        <label class="admin-checkbox" style="margin-top:0.5rem;"><input type="checkbox" id="f-stripe" checked /><span>Create a Stripe price (otherwise checkout charges the inline amount)</span></label>
+        <label class="admin-checkbox" style="margin-top:0.5rem;"><input type="checkbox" id="f-publish" /><span>Publish immediately (visible + bookable on /events)</span></label>
+      </div>
+      <div class="admin-grid-2">
+        <div class="admin-field">
+          <label for="f-zoom-url">Zoom link (only if not auto-creating)</label>
+          <input id="f-zoom-url" class="admin-input" placeholder="https://zoom.us/j/…" />
+        </div>
+        <div class="admin-field">
+          <label for="f-zoom-pass">Zoom passcode</label>
+          <input id="f-zoom-pass" class="admin-input" />
+        </div>
+      </div>`;
+    const m = ui.openModal('New event', body, { submitLabel: 'Create event' });
+    m.submit.addEventListener('click', async () => {
+      const shared = readShared(m);
+      if (!shared) return;
+      const payload = {
+        ...shared,
+        create_zoom: m.body.querySelector('#f-zoom').checked,
+        create_stripe_price: m.body.querySelector('#f-stripe').checked,
+        zoom_join_url: m.body.querySelector('#f-zoom-url').value.trim() || null,
+        zoom_password: m.body.querySelector('#f-zoom-pass').value.trim() || null,
+        status: m.body.querySelector('#f-publish').checked ? 'upcoming' : 'draft',
+      };
+      m.submit.disabled = true;
+      m.submit.textContent = 'Creating…';
+      try {
+        const res = await fetch('/.netlify/functions/admin-create-event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (await token()) },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { ui.toast(data.error || 'Create failed.', 'err'); }
+        else {
+          (data.notes || []).forEach((n) => ui.toast(n));
+          ui.toast(payload.status === 'upcoming' ? 'Created and published.' : 'Created as draft.');
+          m.close(); refresh();
+        }
+      } catch { ui.toast('Network error.', 'err'); }
+      m.submit.disabled = false;
+      m.submit.textContent = 'Create event';
+    });
+  };
+
+  const openEdit = (row) => {
+    const body = `${sharedFields(row)}
+      <div class="admin-grid-2">
+        <div class="admin-field">
+          <label for="f-zoom-url">Zoom link</label>
+          <input id="f-zoom-url" class="admin-input" value="${ui.escape(row.zoom_join_url || '')}" placeholder="https://zoom.us/j/…" />
+        </div>
+        <div class="admin-field">
+          <label for="f-zoom-pass">Zoom passcode</label>
+          <input id="f-zoom-pass" class="admin-input" value="${ui.escape(row.zoom_password || '')}" />
+        </div>
+      </div>
+      <div class="admin-field">
+        <label for="f-status">Status</label>
+        <select id="f-status" class="admin-select">
+          ${['draft', 'upcoming', 'live', 'past', 'cancelled'].map(v => `<option value="${v}" ${row.status === v ? 'selected' : ''}>${v}</option>`).join('')}
+        </select>
+      </div>`;
+    const m = ui.openModal('Edit event', body, { submitLabel: 'Save' });
+    m.submit.addEventListener('click', async () => {
+      const shared = readShared(m);
+      if (!shared) return;
+      const payload = {
+        ...shared,
+        zoom_join_url: m.body.querySelector('#f-zoom-url').value.trim() || null,
+        zoom_password: m.body.querySelector('#f-zoom-pass').value.trim() || null,
+        status: m.body.querySelector('#f-status').value,
+      };
+      m.submit.disabled = true;
+      const { error } = await sb.from('events').update(payload).eq('id', row.id);
+      m.submit.disabled = false;
+      if (error) ui.toast(error.message, 'err');
+      else { ui.toast('Saved.'); m.close(); refresh(); }
+    });
+  };
+
+  document.getElementById('new-btn').addEventListener('click', openNew);
+
+  const refresh = async () => render(await fetchAll());
+  refresh();
+});
+});
+</script>
+</body>
+</html>

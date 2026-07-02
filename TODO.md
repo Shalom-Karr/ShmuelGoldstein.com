@@ -62,7 +62,7 @@ Note: every canonical URL, OG tag, and JSON-LD entry already references `https:/
 ### 3e. Admin pages (`/admin/*`)
 - [ ] `admin/login.html` — Supabase magic-link
 - [ ] `admin/_shared/auth.js` — session check + `is_admin()` gate
-- [ ] `admin/events.html` — CRUD events (create, edit, cancel)
+- [x] `admin/events.html` — CRUD events; create can auto-provision the Zoom meeting (needs ZOOM_ACCOUNT_ID / ZOOM_CLIENT_ID / ZOOM_CLIENT_SECRET env vars from a Server-to-Server OAuth app) and a Stripe Product+Price via `admin-create-event` fn
 - [ ] `admin/testimonials.html` — CRUD testimonials
 - [ ] `admin/shiurim.html` — CRUD shiurim + storage uploader
 - [ ] `admin/subscribers.html` — list subscribers, broadcast email composer
