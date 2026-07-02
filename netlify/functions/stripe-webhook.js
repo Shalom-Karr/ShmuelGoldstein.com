@@ -3,6 +3,7 @@
 // retries can't double-insert or double-send.
 
 const { sendMail } = require('./_shared/mail');
+const { createZoomMeeting } = require('./_shared/zoom');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://pxxifzbljxnbivxkuvrf.supabase.co';
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -37,6 +38,8 @@ exports.handler = async (event) => {
 
   const s = evt.data.object;
   if (s.payment_status !== 'paid') return json(200, { received: true });
+
+  if (s.metadata && s.metadata.booking_id) return handleBookingPaid(s);
 
   const eventId = s.metadata && s.metadata.event_id;
   const email = (s.customer_details && s.customer_details.email) || s.customer_email;
@@ -107,6 +110,115 @@ exports.handler = async (event) => {
 
   return json(200, { received: true });
 };
+
+// 1:1 booking flow — flip the pending hold to paid (idempotently), attach a
+// Zoom meeting when creds exist, email the buyer, and notify the Rabbi.
+async function handleBookingPaid(s) {
+  const bookingId = s.metadata.booking_id;
+  const headers = {
+    apikey: SERVICE,
+    Authorization: `Bearer ${SERVICE}`,
+    'Content-Type': 'application/json',
+  };
+
+  // status filter makes duplicate webhook deliveries no-ops
+  const upd = await fetch(
+    `${SUPABASE_URL}/rest/v1/bookings?id=eq.${encodeURIComponent(bookingId)}&status=neq.paid&select=*,session_type:session_types(name)`,
+    {
+      method: 'PATCH',
+      headers: { ...headers, Prefer: 'return=representation' },
+      body: JSON.stringify({ status: 'paid', stripe_session_id: s.id }),
+    }
+  );
+  if (!upd.ok) {
+    console.error('booking paid update failed', upd.status, await upd.text());
+    return json(500, { error: 'Booking update failed' }); // 500 → Stripe retries
+  }
+  const rows = await upd.json();
+  if (!rows.length) return json(200, { received: true, duplicate: true });
+  const b = rows[0];
+  const typeName = (b.session_type && b.session_type.name) || 'Session with Rabbi Shmuel Goldstein';
+
+  let joinUrl = b.zoom_join_url;
+  let passcode = b.zoom_password;
+  if (!joinUrl) {
+    const zoom = await createZoomMeeting(typeName, new Date(b.starts_at), b.duration_minutes);
+    if (!zoom.error) {
+      joinUrl = zoom.join_url;
+      passcode = zoom.password;
+      await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${encodeURIComponent(b.id)}`, {
+        method: 'PATCH',
+        headers: { ...headers, Prefer: 'return=minimal' },
+        body: JSON.stringify({ zoom_join_url: joinUrl, zoom_password: passcode }),
+      });
+    }
+  }
+
+  const when = fmtWhen(b.starts_at);
+  const zoomText = joinUrl
+    ? `\nJoin link: ${joinUrl}${passcode ? `\nPasscode: ${passcode}` : ''}`
+    : '\nThe Zoom/phone details will be emailed to you before the session.';
+  try {
+    await sendMail({
+      to: b.email,
+      subject: `Confirmed: ${typeName} — ${when}`,
+      text: `Sholom${b.name ? ' ' + b.name : ''},
+
+Your session is confirmed.
+
+${typeName}
+${when} · ${b.duration_minutes} minutes${zoomText}
+
+Your sessions are always available at https://shmuelgoldstein.com/book when you're signed in.
+
+Looking forward to talking.
+
+— Rabbi Shmuel Goldstein
+shmuelgoldstein.com`,
+      html: bookingConfirmationHtml(b, typeName, when, joinUrl, passcode),
+    });
+  } catch (err) {
+    console.error('booking confirmation email failed', b.id, err && err.message);
+  }
+
+  // heads-up to the Rabbi's inbox
+  try {
+    const rabbi = process.env.BOOKING_NOTIFY_EMAIL || process.env.SMTP_FROM || process.env.SMTP_USER;
+    if (rabbi) {
+      await sendMail({
+        to: rabbi,
+        subject: `New booking: ${typeName} — ${when}`,
+        text: `${b.name || 'A client'} (${b.email}) booked ${typeName} on ${when} (${b.duration_minutes} min, $${(b.price_cents / 100).toFixed(2)}).${joinUrl ? `\nZoom: ${joinUrl}${passcode ? ` (passcode ${passcode})` : ''}` : '\nNo Zoom link was auto-created — send them the meeting details.'}\n\nIt's on the admin calendar: https://shmuelgoldstein.com/admin/`,
+      });
+    }
+  } catch (err) {
+    console.error('booking notify email failed', b.id, err && err.message);
+  }
+
+  return json(200, { received: true });
+}
+
+function bookingConfirmationHtml(b, typeName, when, joinUrl, passcode) {
+  const joinBtn = joinUrl
+    ? `<p style="margin:24px 0;"><a href="${joinUrl}" style="display:inline-block;background:#b85c1f;color:#fff;text-decoration:none;padding:12px 22px;border-radius:6px;">Join the session</a></p>${passcode ? `<p style="margin:0 0 14px;color:#555;">Passcode: <strong>${esc(passcode)}</strong></p>` : ''}`
+    : `<p style="margin:0 0 14px;line-height:1.55;">The Zoom/phone details will be emailed to you before the session.</p>`;
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#f5f1ea;font-family:Georgia,serif;color:#1f1a14;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f5f1ea;padding:32px 16px;">
+  <tr><td align="center">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560" style="max-width:560px;background:#fffaf2;border:1px solid #e6dccb;border-radius:8px;padding:36px 32px;">
+      <tr><td>
+        <p style="margin:0 0 18px;color:#7c5a2e;letter-spacing:0.12em;font-size:12px;text-transform:uppercase;">Confirmed</p>
+        <h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;">${esc(typeName)}</h1>
+        <p style="margin:0 0 6px;">Sholom${b.name ? ' ' + esc(b.name) : ''},</p>
+        <p style="margin:0 0 14px;line-height:1.55;">Your session is confirmed for <strong>${esc(when)}</strong> · ${b.duration_minutes} minutes.</p>
+        ${joinBtn}
+        <p style="margin:0 0 14px;line-height:1.55;">Your sessions are always available at <a href="https://shmuelgoldstein.com/book" style="color:#b85c1f;">shmuelgoldstein.com/book</a> when you're signed in.</p>
+        <p style="margin:24px 0 0;line-height:1.55;">— Rabbi Shmuel Goldstein</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table></body></html>`;
+}
 
 function fmtWhen(iso) {
   try {

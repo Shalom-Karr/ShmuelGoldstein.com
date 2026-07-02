@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Book a Session — Rabbi Shmuel Goldstein</title>
+  <meta name="description" content="See open times and book a session with Rabbi Shmuel Goldstein. Sign in to manage your upcoming appointments." />
+  <link rel="canonical" href="https://shmuelgoldstein.com/book" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://shmuelgoldstein.com/book" />
+  <meta property="og:title" content="Book a Session — Rabbi Shmuel Goldstein" />
+  <meta property="og:description" content="See open times and book a session with Rabbi Shmuel Goldstein. Sign in to manage your upcoming appointments." />
+  <meta property="og:image" content="https://shmuelgoldstein.com/assets/og-image.jpg" />
+  <meta property="og:site_name" content="Rabbi Shmuel Goldstein" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="/assets/favicons/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicons/favicon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicons/apple-touch-icon.png" />
+  <link rel="manifest" href="/assets/favicons/site.webmanifest" />
+  <meta name="theme-color" content="#b85c1f" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <style>
+    .book-day { margin-bottom: 1.5rem; }
+    .book-day h4 { margin: 0 0 0.6rem; font-size: 1rem; }
+    .slot-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .slot-btn { border: 1px solid var(--line-fine, #ddd4c5); background: var(--paper, #fffaf2); border-radius: 8px; padding: 0.5rem 0.9rem; font-size: 0.9rem; cursor: pointer; }
+    .slot-btn:hover { border-color: #b85c1f; color: #b85c1f; }
+    .type-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin: 2rem 0; }
+    .type-card { text-align: left; border: 1px solid var(--line-fine, #ddd4c5); background: var(--paper, #fffaf2); border-radius: 14px; padding: 1.25rem; cursor: pointer; }
+    .type-card.is-selected { border-color: #b85c1f; box-shadow: 0 0 0 1px #b85c1f; }
+    .type-card h4 { margin: 0 0 0.4rem; }
+    .type-card .meta { color: var(--ink-soft, #5a5348); font-size: 0.9rem; }
+    .booking-item { border: 1px solid var(--line-fine, #ddd4c5); background: var(--paper, #fffaf2); border-radius: 14px; padding: 1.25rem; margin-bottom: 1rem; text-align: left; }
+    .auth-bar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: center; margin-top: 1rem; }
+    .banner-ok { background: #eef7ee; border: 1px solid #bcd9bc; color: #23531f; border-radius: 10px; padding: 0.9rem 1.2rem; margin: 0 0 2rem; }
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="container nav-row">
+    <a href="index.html" class="brand">
+      <span class="monogram">SG</span>
+      <span class="wordmark">Shmuel <span class="amp">·</span> Goldstein</span>
+    </a>
+    <nav class="primary-nav">
+      <a href="coaching.html">Coaching</a>
+      <a href="approach.html">Approach</a>
+      <a href="about.html">About</a>
+      <a href="shiurim.html">Shiurim</a>
+      <a href="stories.html">Stories</a>
+      <a href="events.html">Events</a>
+      <a href="lets-talk.html" class="nav-cta">Let's talk</a>
+    </nav>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
+      <svg class="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M3 12h18M3 18h18"/></svg><svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M6 18L18 6"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="mobile-drawer">
+  <a href="coaching.html">Coaching</a>
+  <a href="approach.html">Approach</a>
+  <a href="about.html">About</a>
+  <a href="shiurim.html">Shiurim</a>
+  <a href="stories.html">Stories</a>
+  <a href="events.html">Events</a>
+  <a href="lets-talk.html">Let's talk</a>
+</div>
+
+<main id="main" tabindex="-1">
+
+<section class="hero hero-split" style="padding: 7.5rem 0 5rem; min-height: auto;">
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-text" style="max-width: 760px;">
+        <span class="eyebrow" data-reveal>Book a Session</span>
+        <h1 data-reveal data-reveal-delay="100">Pick a time that <span class="accent">works.</span></h1>
+        <p class="lead" data-reveal data-reveal-delay="200">Choose a session, pick an open slot, and pay securely. Your appointments — with the Zoom links to join them — live right here under your account.</p>
+        <div class="auth-bar" id="auth-bar" style="justify-content: flex-start;"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top: 0;">
+  <div class="container-narrow" style="text-align: center;">
+    <div id="checkout-banner"></div>
+
+    <div id="my-sessions-wrap" hidden>
+      <span class="eyebrow">Your Sessions</span>
+      <h2 class="section-heading" style="margin-bottom: 1.5rem;">Upcoming <span class="accent">appointments.</span></h2>
+      <div id="my-sessions" style="margin-bottom: 3.5rem;"></div>
+    </div>
+
+    <span class="eyebrow">Step 1</span>
+    <h2 class="section-heading" style="margin-bottom: 0;">Choose a <span class="accent">session.</span></h2>
+    <div class="type-cards" id="type-cards"><p style="grid-column: 1/-1; color: var(--ink-soft);">Loading sessions…</p></div>
+
+    <span class="eyebrow">Step 2</span>
+    <h2 class="section-heading" style="margin-bottom: 1.5rem;">Pick a <span class="accent">time.</span></h2>
+    <p class="section-lead" style="margin-bottom: 2rem;">Times are shown in your local time zone.</p>
+    <div id="slots" style="text-align: left;"><p style="color: var(--ink-soft);">Choose a session above to see open times.</p></div>
+    <p class="form-msg" id="book-msg" aria-live="polite" style="margin-top: 1rem;"></p>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-bottom">
+      <span class="brand">
+        <span class="monogram on-ink">SG</span>
+        <span>Rabbi Shmuel Goldstein</span>
+      </span>
+      <span>© <span data-year></span> All rights reserved.</span>
+      <span>Coaching rooted in Torah.</span>
+      <span class="built-by">Built by <a href="https://github.com/Shalom-Karr" target="_blank" rel="noopener">Shalom Karr</a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="js/config.js" defer></script>
+<script src="js/main.js" defer></script>
+<script src="js/book.js" defer></script>
+</body>
+</html>

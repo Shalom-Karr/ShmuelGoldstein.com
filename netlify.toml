@@ -120,6 +120,16 @@
   to = "/access.html"
   status = 200
 
+[[redirects]]
+  from = "/book"
+  to = "/book.html"
+  status = 200
+
+[[redirects]]
+  from = "/signup"
+  to = "/signup.html"
+  status = 200
+
 # Catch-all 404 — must be the LAST redirect rule
 [[redirects]]
   from = "/*"

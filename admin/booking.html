@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Booking — Admin</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" href="/assets/favicons/favicon.ico" />
+  <link rel="stylesheet" href="/admin/_shared/admin.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="/js/config.js" defer></script>
+  <script src="/admin/_shared/ui.js" defer></script>
+  <script src="/admin/_shared/auth.js" defer></script>
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <a class="admin-brand" href="/admin/">
+      <span class="monogram">SG</span>
+      <span class="admin-brand-text">Admin <small>shmuelgoldstein.com</small></span>
+    </a>
+    <nav class="admin-nav">
+      <a href="/admin/">Dashboard</a>
+      <a href="/admin/testimonials.html">Testimonials</a>
+      <a href="/admin/events.html">Events</a>
+      <a href="/admin/booking.html" class="is-active">Booking</a>
+      <a href="/admin/shiurim.html">Shiurim</a>
+      <a href="/admin/subscribers.html">Subscribers</a>
+      <a href="/admin/messages.html">Messages</a>
+      <a href="/admin/email.html">Email</a>
+      <a href="/admin/analytics.html">Analytics</a>
+      <a href="/" target="_blank">View site ↗</a>
+    </nav>
+    <div class="admin-identity">
+      <span class="role">Signed in</span>
+      <span class="who" data-admin-identity>—</span>
+      <button class="admin-btn admin-btn--ghost admin-btn--xs" data-admin-logout type="button">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-head">
+      <div>
+        <h1>Booking</h1>
+        <p class="sub">1:1 sessions sold on <a href="/book" target="_blank"><code>/book</code></a> — what's offered, when you're available, and who booked.</p>
+      </div>
+    </div>
+
+    <div class="admin-card">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+        <h2 style="margin:0;">Session types &amp; prices</h2>
+        <button class="admin-btn admin-btn--primary admin-btn--xs" id="new-type" type="button">+ New session type</button>
+      </div>
+      <div id="types-tbl" style="margin-top:1rem;">Loading…</div>
+    </div>
+
+    <div class="admin-card">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+        <h2 style="margin:0;">Weekly availability</h2>
+        <button class="admin-btn admin-btn--primary admin-btn--xs" id="new-rule" type="button">+ Add window</button>
+      </div>
+      <p class="sub" style="margin:0.5rem 0 0;">Times are Cleveland time (America/New_York). Slots are offered every session-length inside each window.</p>
+      <div id="rules-tbl" style="margin-top:1rem;">Loading…</div>
+    </div>
+
+    <div class="admin-card">
+      <h2>Upcoming bookings</h2>
+      <div id="bookings-tbl" style="margin-top:1rem;">Loading…</div>
+    </div>
+  </main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+window.adminReady.then(async (ctx) => {
+  if (!ctx) return;
+  const { sb } = ctx;
+  const ui = window.adminUI;
+
+  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const fmtPrice = (c) => '$' + (c / 100).toFixed(2).replace(/\.00$/, '');
+  const fmtTime = (t) => {
+    const [h, m] = String(t).split(':').map(Number);
+    const am = h < 12;
+    return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${am ? 'AM' : 'PM'}`;
+  };
+
+  // ---------- session types ----------
+  const loadTypes = async () => {
+    const { data, error } = await sb.from('session_types').select('*').order('sort_order').order('created_at');
+    if (error) { ui.toast(error.message, 'err'); return; }
+    const rows = data || [];
+    document.getElementById('types-tbl').innerHTML = !rows.length
+      ? '<div class="empty-state"><h3>Nothing offered yet</h3><p>Add a session type — e.g. "Discovery Call, 60 min, $50".</p></div>'
+      : `<table class="admin-table">
+          <thead><tr><th>Name</th><th>Duration</th><th>Price</th><th>Status</th><th style="width:160px"></th></tr></thead>
+          <tbody>${rows.map(r => `<tr data-id="${ui.escape(r.id)}">
+            <td><strong>${ui.escape(r.name)}</strong>${r.description ? `<br/><small style="color:var(--ink-muted);">${ui.escape(r.description.slice(0, 80))}</small>` : ''}</td>
+            <td>${r.duration_minutes} min</td>
+            <td>${fmtPrice(r.price_cents)}</td>
+            <td>${r.active ? '<span class="admin-pill admin-pill--ok">Active</span>' : '<span class="admin-pill admin-pill--muted">Hidden</span>'}</td>
+            <td class="row-actions">
+              <button class="admin-btn admin-btn--ghost admin-btn--xs" data-type-edit>Edit</button>
+              <button class="admin-btn admin-btn--danger admin-btn--xs" data-type-del>Delete</button>
+            </td>
+          </tr>`).join('')}</tbody></table>`;
+
+    document.querySelectorAll('[data-type-edit]').forEach((b) => b.addEventListener('click', (e) =>
+      openType(rows.find(r => r.id === e.target.closest('tr').dataset.id))));
+    document.querySelectorAll('[data-type-del]').forEach((b) => b.addEventListener('click', async (e) => {
+      const row = rows.find(r => r.id === e.target.closest('tr').dataset.id);
+      if (!(await ui.confirm(`Delete "${row.name}"? Existing bookings keep their records.`))) return;
+      const { error: err } = await sb.from('session_types').delete().eq('id', row.id);
+      if (err) ui.toast(err.message, 'err'); else { ui.toast('Deleted.'); loadTypes(); }
+    }));
+  };
+
+  const openType = (row = null) => {
+    const isNew = !row;
+    const m = ui.openModal(isNew ? 'New session type' : 'Edit session type', `
+      <div class="admin-field">
+        <label for="t-name">Name *</label>
+        <input id="t-name" class="admin-input" required value="${ui.escape(row?.name || '')}" placeholder="Discovery Call" />
+      </div>
+      <div class="admin-field">
+        <label for="t-desc">Description</label>
+        <textarea id="t-desc" class="admin-textarea" rows="2">${ui.escape(row?.description || '')}</textarea>
+      </div>
+      <div class="admin-grid-2">
+        <div class="admin-field">
+          <label for="t-duration">Duration (minutes)</label>
+          <input id="t-duration" class="admin-input" type="number" min="15" step="15" value="${row?.duration_minutes ?? 60}" />
+        </div>
+        <div class="admin-field">
+          <label for="t-price">Price (USD) *</label>
+          <input id="t-price" class="admin-input" type="number" min="0.50" step="0.01" required value="${row ? (row.price_cents / 100).toFixed(2) : ''}" placeholder="50.00" />
+        </div>
+      </div>
+      <div class="admin-grid-2">
+        <div class="admin-field">
+          <label for="t-sort">Sort order</label>
+          <input id="t-sort" class="admin-input" type="number" value="${row?.sort_order ?? 100}" />
+        </div>
+        <div class="admin-field">
+          <label class="admin-checkbox" style="margin-top:1.9rem;"><input type="checkbox" id="t-active" ${row?.active ?? true ? 'checked' : ''}/><span>Bookable on /book</span></label>
+        </div>
+      </div>`, { submitLabel: 'Save' });
+    m.submit.addEventListener('click', async () => {
+      const price = Math.round(parseFloat(m.body.querySelector('#t-price').value) * 100);
+      const payload = {
+        name: m.body.querySelector('#t-name').value.trim(),
+        description: m.body.querySelector('#t-desc').value.trim() || null,
+        duration_minutes: parseInt(m.body.querySelector('#t-duration').value, 10) || 60,
+        price_cents: price,
+        sort_order: parseInt(m.body.querySelector('#t-sort').value, 10) || 100,
+        active: m.body.querySelector('#t-active').checked,
+      };
+      if (!payload.name || !Number.isInteger(price) || price < 50) { ui.toast('Name and a price of at least $0.50 are required.', 'err'); return; }
+      m.submit.disabled = true;
+      const q = isNew ? sb.from('session_types').insert(payload) : sb.from('session_types').update(payload).eq('id', row.id);
+      const { error } = await q;
+      m.submit.disabled = false;
+      if (error) ui.toast(error.message, 'err');
+      else { ui.toast(isNew ? 'Created.' : 'Saved.'); m.close(); loadTypes(); }
+    });
+  };
+
+  // ---------- availability ----------
+  const loadRules = async () => {
+    const { data, error } = await sb.from('availability_rules').select('*').order('day_of_week').order('start_time');
+    if (error) { ui.toast(error.message, 'err'); return; }
+    const rows = data || [];
+    document.getElementById('rules-tbl').innerHTML = !rows.length
+      ? '<div class="empty-state"><h3>No availability set</h3><p>Add a weekly window — e.g. Tuesday 3:00 PM – 6:00 PM.</p></div>'
+      : `<table class="admin-table">
+          <thead><tr><th>Day</th><th>From</th><th>Until</th><th style="width:100px"></th></tr></thead>
+          <tbody>${rows.map(r => `<tr data-id="${ui.escape(r.id)}">
+            <td><strong>${DAYS[r.day_of_week]}</strong></td>
+            <td>${fmtTime(r.start_time)}</td>
+            <td>${fmtTime(r.end_time)}</td>
+            <td class="row-actions"><button class="admin-btn admin-btn--danger admin-btn--xs" data-rule-del>Remove</button></td>
+          </tr>`).join('')}</tbody></table>`;
+
+    document.querySelectorAll('[data-rule-del]').forEach((b) => b.addEventListener('click', async (e) => {
+      const id = e.target.closest('tr').dataset.id;
+      if (!(await ui.confirm('Remove this availability window? Existing bookings are not affected.'))) return;
+      const { error: err } = await sb.from('availability_rules').delete().eq('id', id);
+      if (err) ui.toast(err.message, 'err'); else { ui.toast('Removed.'); loadRules(); }
+    }));
+  };
+
+  const openRule = () => {
+    const m = ui.openModal('Add availability window', `
+      <div class="admin-field">
+        <label for="r-day">Day of week</label>
+        <select id="r-day" class="admin-select">${DAYS.map((d, i) => `<option value="${i}">${d}</option>`).join('')}</select>
+      </div>
+      <div class="admin-grid-2">
+        <div class="admin-field">
+          <label for="r-start">From (Cleveland time)</label>
+          <input id="r-start" class="admin-input" type="time" value="15:00" required />
+        </div>
+        <div class="admin-field">
+          <label for="r-end">Until</label>
+          <input id="r-end" class="admin-input" type="time" value="18:00" required />
+        </div>
+      </div>`, { submitLabel: 'Add window' });
+    m.submit.addEventListener('click', async () => {
+      const payload = {
+        day_of_week: parseInt(m.body.querySelector('#r-day').value, 10),
+        start_time: m.body.querySelector('#r-start').value,
+        end_time: m.body.querySelector('#r-end').value,
+      };
+      if (!payload.start_time || !payload.end_time || payload.end_time <= payload.start_time) {
+        ui.toast('End time must be after start time.', 'err'); return;
+      }
+      m.submit.disabled = true;
+      const { error } = await sb.from('availability_rules').insert(payload);
+      m.submit.disabled = false;
+      if (error) ui.toast(error.message, 'err');
+      else { ui.toast('Added.'); m.close(); loadRules(); }
+    });
+  };
+
+  // ---------- bookings ----------
+  const loadBookings = async () => {
+    const { data, error } = await sb.from('bookings')
+      .select('id, email, name, starts_at, duration_minutes, price_cents, status, zoom_join_url, zoom_password, session_type:session_types(name)')
+      .gte('starts_at', new Date(Date.now() - 864e5).toISOString())
+      .in('status', ['paid', 'pending'])
+      .order('starts_at', { ascending: true })
+      .limit(100);
+    if (error) { ui.toast(error.message, 'err'); return; }
+    const rows = data || [];
+    document.getElementById('bookings-tbl').innerHTML = !rows.length
+      ? '<div class="empty-state"><h3>No upcoming bookings</h3><p>Paid bookings from /book land here (and on the dashboard calendar).</p></div>'
+      : `<table class="admin-table">
+          <thead><tr><th>When</th><th>Client</th><th>Session</th><th>Paid</th><th>Zoom</th><th style="width:110px"></th></tr></thead>
+          <tbody>${rows.map(b => `<tr data-id="${ui.escape(b.id)}">
+            <td style="white-space:nowrap;">${new Date(b.starts_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
+            <td>${ui.escape(b.name || '—')}<br/><small style="color:var(--ink-muted);">${ui.escape(b.email)}</small></td>
+            <td>${ui.escape((b.session_type && b.session_type.name) || '—')} · ${b.duration_minutes}m</td>
+            <td>${b.status === 'paid' ? `<span class="admin-pill admin-pill--ok">${fmtPrice(b.price_cents)}</span>` : '<span class="admin-pill admin-pill--warn">pending</span>'}</td>
+            <td>${b.zoom_join_url ? `<a href="${ui.escape(b.zoom_join_url)}" target="_blank" rel="noopener">Join</a>${b.zoom_password ? ` <small>(${ui.escape(b.zoom_password)})</small>` : ''}` : '—'}</td>
+            <td class="row-actions"><button class="admin-btn admin-btn--danger admin-btn--xs" data-bk-cancel>Cancel</button></td>
+          </tr>`).join('')}</tbody></table>`;
+
+    document.querySelectorAll('[data-bk-cancel]').forEach((btn) => btn.addEventListener('click', async (e) => {
+      const b = rows.find(r => r.id === e.target.closest('tr').dataset.id);
+      if (!(await ui.confirm(`Cancel ${b.name || b.email}'s booking? This frees the slot but does NOT refund — do refunds in the Stripe dashboard.`))) return;
+      const { error: err } = await sb.from('bookings').update({ status: 'cancelled' }).eq('id', b.id);
+      if (err) ui.toast(err.message, 'err'); else { ui.toast('Cancelled. Remember the Stripe refund if one is owed.'); loadBookings(); }
+    }));
+  };
+
+  document.getElementById('new-type').addEventListener('click', () => openType());
+  document.getElementById('new-rule').addEventListener('click', openRule);
+
+  loadTypes();
+  loadRules();
+  loadBookings();
+});
+});
+</script>
+</body>
+</html>

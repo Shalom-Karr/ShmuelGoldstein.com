@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Create an Account — Rabbi Shmuel Goldstein</title>
+  <meta name="description" content="Create a free account to book sessions with Rabbi Shmuel Goldstein and manage your appointments." />
+  <link rel="canonical" href="https://shmuelgoldstein.com/signup" />
+  <meta name="robots" content="noindex" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="/assets/favicons/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicons/favicon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicons/apple-touch-icon.png" />
+  <link rel="manifest" href="/assets/favicons/site.webmanifest" />
+  <meta name="theme-color" content="#b85c1f" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="container nav-row">
+    <a href="index.html" class="brand">
+      <span class="monogram">SG</span>
+      <span class="wordmark">Shmuel <span class="amp">·</span> Goldstein</span>
+    </a>
+    <nav class="primary-nav">
+      <a href="coaching.html">Coaching</a>
+      <a href="approach.html">Approach</a>
+      <a href="about.html">About</a>
+      <a href="shiurim.html">Shiurim</a>
+      <a href="stories.html">Stories</a>
+      <a href="events.html">Events</a>
+      <a href="lets-talk.html" class="nav-cta">Let's talk</a>
+    </nav>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
+      <svg class="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M3 12h18M3 18h18"/></svg><svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M6 18L18 6"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="mobile-drawer">
+  <a href="coaching.html">Coaching</a>
+  <a href="approach.html">Approach</a>
+  <a href="about.html">About</a>
+  <a href="shiurim.html">Shiurim</a>
+  <a href="stories.html">Stories</a>
+  <a href="events.html">Events</a>
+  <a href="lets-talk.html">Let's talk</a>
+</div>
+
+<main id="main" tabindex="-1">
+
+<section>
+  <div class="container-narrow">
+    <div class="calendly-wrap">
+      <span class="eyebrow">Your Account</span>
+      <h3 style="margin-top: 0.75rem;">Create an account or <em class="accent">sign in.</em></h3>
+      <p>No password to remember — we email you a secure sign-in link. First time here? The same link creates your account.</p>
+
+      <form id="signup-form" class="contact-form" style="max-width: 420px; margin: 0 auto; text-align: left;">
+        <div class="contact-field">
+          <label for="su-name">Name <span class="optional">(first visit only)</span></label>
+          <input id="su-name" type="text" name="name" autocomplete="name" placeholder="Your name" />
+        </div>
+        <div class="contact-field">
+          <label for="su-email">Email</label>
+          <input id="su-email" type="email" name="email" autocomplete="email" required placeholder="your@email.com" />
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Email me a sign-in link</button>
+      </form>
+      <p class="form-msg" id="signup-msg" aria-live="polite" style="margin: 1rem auto 0;"></p>
+      <p style="margin: 1.5rem auto 0; font-size: 0.95rem;">Once you're in, head to <a href="book.html">the booking page</a> to pick a time.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-bottom">
+      <span class="brand">
+        <span class="monogram on-ink">SG</span>
+        <span>Rabbi Shmuel Goldstein</span>
+      </span>
+      <span>© <span data-year></span> All rights reserved.</span>
+      <span>Coaching rooted in Torah.</span>
+      <span class="built-by">Built by <a href="https://github.com/Shalom-Karr" target="_blank" rel="noopener">Shalom Karr</a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="js/config.js" defer></script>
+<script src="js/main.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var wait = setInterval(function () {
+    var sb = window.getSupabase && window.getSupabase();
+    if (!sb) return;
+    clearInterval(wait);
+
+    sb.auth.getSession().then(function (res) {
+      if (res.data.session) location.replace('/book.html');
+    });
+
+    var form = document.getElementById('signup-form');
+    var msg = document.getElementById('signup-msg');
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var email = document.getElementById('su-email').value.trim();
+      var name = document.getElementById('su-name').value.trim();
+      msg.textContent = 'Sending your link…';
+      var { error } = await sb.auth.signInWithOtp({
+        email: email,
+        options: {
+          emailRedirectTo: location.origin + '/book.html',
+          data: name ? { full_name: name } : undefined,
+        },
+      });
+      msg.textContent = error
+        ? error.message
+        : 'Check your inbox — the link signs you in and brings you to the booking page.';
+    });
+  }, 50);
+});
+</script>
+</body>
+</html>

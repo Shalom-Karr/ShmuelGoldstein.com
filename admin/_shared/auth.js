@@ -24,10 +24,10 @@
       .maybeSingle();
 
     if (!row) {
-      // Signed in but not in admins — sign out and bounce.
-      await sb.auth.signOut();
-      alert('That account is not an admin on this site.');
-      location.replace('/admin/login.html');
+      // Signed in but not in admins — bounce to the public site WITHOUT
+      // signing out: customer accounts (booking) share this auth and their
+      // session must survive stumbling onto an admin URL.
+      location.replace('/book.html');
       return null;
     }
 

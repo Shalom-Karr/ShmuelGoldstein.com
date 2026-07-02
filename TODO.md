@@ -56,6 +56,19 @@ Note: every canonical URL, OG tag, and JSON-LD entry already references `https:/
 - [ ] Add webhook endpoint in Stripe dashboard → `https://shmuelgoldstein.com/api/stripe-webhook` (event: `checkout.session.completed`) → set `STRIPE_WEBHOOK_SECRET` in Netlify env
 - [ ] Test full sale flow in test mode end-to-end before flipping to live keys
 
+### 3c¹. On-site 1:1 booking (book.html)
+- [x] Migration `0006_booking.sql` — `session_types`, `availability_rules`, `bookings`, `v_booked_slots`, `v_admin_events`; authenticated role can no longer read events Zoom columns (**run in Supabase SQL editor after 0005**)
+- [x] `book.html` + `js/book.js` — session-type picker, open slots from recurring availability (America/New_York), Stripe Checkout, "Your Sessions" list with Zoom links for signed-in users
+- [x] `signup.html` — passwordless account creation / sign-in (magic link, name captured on first visit)
+- [x] `netlify/functions/create-booking-checkout.js` — auth'd users only; validates slot against rules, holds it (30-min pending), mints Checkout
+- [x] `stripe-webhook.js` — booking flow: pending→paid, auto-Zoom via `_shared/zoom.js` when ZOOM_* set, confirmation to buyer + notify email to Rabbi (`BOOKING_NOTIFY_EMAIL` env, falls back to SMTP_FROM)
+- [x] `admin/booking.html` — session types & prices CRUD, weekly availability windows, upcoming bookings (cancel frees slot; refunds stay manual in Stripe)
+- [x] Dashboard calendar shows 1:1 bookings (teal) beside events (orange)
+- [x] Admin gate no longer signs out non-admin accounts (customer sessions survive hitting /admin)
+- [ ] **Supabase Auth config:** add `https://shmuelgoldstein.com/book.html` to Auth → URL Configuration → Redirect URLs (magic links won't land on /book until then)
+- [ ] Seed first session type + availability windows in /admin/booking.html
+- [ ] Add /book to public nav once live (deliberately unlinked while Calendly decision is pending)
+
 ### 3c². Calendly API integration (deferred)
 - [ ] Pull Calendly bookings into the admin dashboard calendar. Plan: personal access token (Calendly → Integrations → API & webhooks) in `CALENDLY_API_TOKEN` env var; admin-gated Netlify fn calls `GET /users/me` → `GET /scheduled_events?user=…&min_start_time=…&max_start_time=…` → `GET {event}/invitees` for names/emails; merge into the dashboard calendar alongside site events (join_url comes from `event.location`).
 

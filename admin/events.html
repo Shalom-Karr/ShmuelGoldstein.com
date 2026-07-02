@@ -25,6 +25,7 @@
       <a href="/admin/">Dashboard</a>
       <a href="/admin/testimonials.html">Testimonials</a>
       <a href="/admin/events.html" class="is-active">Events</a>
+      <a href="/admin/booking.html">Booking</a>
       <a href="/admin/shiurim.html">Shiurim</a>
       <a href="/admin/subscribers.html">Subscribers</a>
       <a href="/admin/messages.html">Messages</a>
@@ -75,8 +76,9 @@ window.adminReady.then(async (ctx) => {
   };
 
   const fetchAll = async () => {
+    // reads via v_admin_events: zoom columns on events are admin-gated
     const [evRes, pRes] = await Promise.all([
-      sb.from('events').select('*').order('starts_at', { ascending: false }),
+      sb.from('v_admin_events').select('*').order('starts_at', { ascending: false }),
       sb.from('purchases').select('event_id'),
     ]);
     if (evRes.error) { ui.toast('Failed to load: ' + evRes.error.message, 'err'); return { rows: [], sold: {} }; }
