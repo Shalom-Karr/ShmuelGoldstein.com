@@ -2,6 +2,18 @@
 // ZOOM_CLIENT_ID / ZOOM_CLIENT_SECRET; returns { error } when unset so
 // callers can degrade gracefully instead of failing the whole request.
 
+const crypto = require('crypto');
+
+// A fresh random passcode per meeting, set explicitly on create so we don't
+// depend on the account's "require passcode" toggle. 8 chars from an
+// unambiguous alphabet (no 0/O/1/I/l), well within Zoom's 10-char limit.
+function makePasscode() {
+  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let out = '';
+  for (let i = 0; i < 8; i++) out += alphabet[crypto.randomInt(alphabet.length)];
+  return out;
+}
+
 async function createZoomMeeting(title, startsAt, durationMinutes) {
   const accountId = process.env.ZOOM_ACCOUNT_ID;
   const clientId = process.env.ZOOM_CLIENT_ID;
@@ -19,6 +31,7 @@ async function createZoomMeeting(title, startsAt, durationMinutes) {
     if (!tokRes.ok) return { error: `token request failed (${tokRes.status})` };
     const { access_token } = await tokRes.json();
 
+    const passcode = makePasscode();
     const mtgRes = await fetch('https://api.zoom.us/v2/users/me/meetings', {
       method: 'POST',
       headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
@@ -27,17 +40,24 @@ async function createZoomMeeting(title, startsAt, durationMinutes) {
         type: 2, // scheduled
         start_time: startsAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
         duration: durationMinutes,
+        password: passcode,               // our own random code, per meeting
         settings: {
-          waiting_room: false,
+          waiting_room: true,             // clients wait until the Rabbi admits them
           join_before_host: false,
           mute_upon_entry: true,
           approval_type: 2,
+          meeting_authentication: false,
         },
       }),
     });
     if (!mtgRes.ok) return { error: `meeting create failed (${mtgRes.status})` };
     const m = await mtgRes.json();
-    return { join_url: m.join_url, password: m.password || null };
+    return {
+      join_url: m.join_url,
+      password: m.password || passcode,   // echo back what Zoom stored (falls back to ours)
+      start_url: m.start_url || null,      // host link (short-lived token; also in the Rabbi's Zoom Meetings list)
+      meeting_id: m.id || null,
+    };
   } catch (err) {
     console.error('zoom create failed', err && err.message);
     return { error: 'request error' };

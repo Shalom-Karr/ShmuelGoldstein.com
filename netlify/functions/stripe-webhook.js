@@ -130,6 +130,23 @@ exports.handler = async (event) => {
     console.error('confirmation email failed', purchase.id, err && err.message);
   }
 
+  // Heads-up to the Rabbi for the event seat too.
+  try {
+    const rabbi = process.env.BOOKING_NOTIFY_EMAIL || process.env.SMTP_FROM || process.env.SMTP_USER;
+    if (rabbi) {
+      const when = ev ? fmtWhen(ev.starts_at) : '';
+      const zoomLine = ev && ev.zoom_join_url ? `\nZoom: ${ev.zoom_join_url}${ev.zoom_password ? ` (passcode ${ev.zoom_password})` : ''}` : '';
+      await sendMail({
+        to: rabbi,
+        replyTo: email || undefined,
+        subject: `Event booking: ${ev ? ev.title : 'seat purchased'}${when ? ` — ${when}` : ''}`,
+        text: `${name || 'Someone'} (${email}) reserved a seat${ev ? ` for ${ev.title} on ${when}` : ''}.${zoomLine}\n\nAdmin: https://shmuelgoldstein.com/admin/events.html`,
+      });
+    }
+  } catch (err) {
+    console.error('event notify email failed', purchase.id, err && err.message);
+  }
+
   return json(200, { received: true });
 };
 
@@ -163,11 +180,13 @@ async function handleBookingPaid(s) {
 
   let joinUrl = b.zoom_join_url;
   let passcode = b.zoom_password;
+  let startUrl = null;
   if (!joinUrl) {
     const zoom = await createZoomMeeting(typeName, new Date(b.starts_at), b.duration_minutes);
     if (!zoom.error) {
       joinUrl = zoom.join_url;
       passcode = zoom.password;
+      startUrl = zoom.start_url;
       await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${encodeURIComponent(b.id)}`, {
         method: 'PATCH',
         headers: { ...headers, Prefer: 'return=minimal' },
@@ -203,14 +222,18 @@ shmuelgoldstein.com`,
     console.error('booking confirmation email failed', b.id, err && err.message);
   }
 
-  // heads-up to the Rabbi's inbox
+  // heads-up to the Rabbi's inbox — everything he needs to host this session.
   try {
     const rabbi = process.env.BOOKING_NOTIFY_EMAIL || process.env.SMTP_FROM || process.env.SMTP_USER;
     if (rabbi) {
+      const zoomBlock = joinUrl
+        ? `\n\nZoom meeting:\n  Start as host: ${startUrl || '(open your Zoom app → Meetings → this session → Start)'}\n  Join link: ${joinUrl}\n  Passcode: ${passcode || '—'}\n(The meeting is also in your Zoom account's Meetings list — starting it there always makes you host.)`
+        : '\n\nNo Zoom link was auto-created — send the client meeting details manually.';
       await sendMail({
         to: rabbi,
+        replyTo: b.email || undefined,
         subject: `New booking: ${typeName} — ${when}`,
-        text: `${b.name || 'A client'} (${b.email}) booked ${typeName} on ${when} (${b.duration_minutes} min, $${(b.price_cents / 100).toFixed(2)}).${joinUrl ? `\nZoom: ${joinUrl}${passcode ? ` (passcode ${passcode})` : ''}` : '\nNo Zoom link was auto-created — send them the meeting details.'}\n\nIt's on the admin calendar: https://shmuelgoldstein.com/admin/`,
+        text: `${b.name || 'A client'} (${b.email}) booked ${typeName}.\nWhen: ${when} · ${b.duration_minutes} min · $${(b.price_cents / 100).toFixed(2)}${zoomBlock}\n\nAdmin calendar: https://shmuelgoldstein.com/admin/`,
       });
     }
   } catch (err) {
