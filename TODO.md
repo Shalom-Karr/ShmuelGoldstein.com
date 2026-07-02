@@ -52,7 +52,7 @@ Note: every canonical URL, OG tag, and JSON-LD entry already references `https:/
 - [x] Build `access.html` — reads `?session_id=`, calls `/api/event-access`, shows Zoom link + password + `.ics` download
 - [x] `/api/*` redirect + `/events` + `/access` routes in netlify.toml; `/access` is noindex/no-store
 - [x] Migration `0005_events_zoom_column_privs.sql` — anon can no longer select `zoom_join_url`/`zoom_password` (**run it in the Supabase SQL editor**)
-- [ ] Set `STRIPE_SECRET_KEY` in Netlify env (roll the key first — it was exposed in chat)
+- [ ] Set `STRIPE_SECRET_KEY` in Netlify env
 - [ ] Add webhook endpoint in Stripe dashboard → `https://shmuelgoldstein.com/api/stripe-webhook` (event: `checkout.session.completed`) → set `STRIPE_WEBHOOK_SECRET` in Netlify env
 - [ ] Test full sale flow in test mode end-to-end before flipping to live keys
 
