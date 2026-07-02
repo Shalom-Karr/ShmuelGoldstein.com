@@ -56,6 +56,9 @@ Note: every canonical URL, OG tag, and JSON-LD entry already references `https:/
 - [ ] Add webhook endpoint in Stripe dashboard → `https://shmuelgoldstein.com/api/stripe-webhook` (event: `checkout.session.completed`) → set `STRIPE_WEBHOOK_SECRET` in Netlify env
 - [ ] Test full sale flow in test mode end-to-end before flipping to live keys
 
+### 3c². Calendly API integration (deferred)
+- [ ] Pull Calendly bookings into the admin dashboard calendar. Plan: personal access token (Calendly → Integrations → API & webhooks) in `CALENDLY_API_TOKEN` env var; admin-gated Netlify fn calls `GET /users/me` → `GET /scheduled_events?user=…&min_start_time=…&max_start_time=…` → `GET {event}/invitees` for names/emails; merge into the dashboard calendar alongside site events (join_url comes from `event.location`).
+
 ### 3d. Reminder cron
 - [ ] `netlify/functions/send-reminders.js` with `schedule('0 * * * *', …)` — sends 24h reminders, marks `purchases.reminder_sent_at`
 

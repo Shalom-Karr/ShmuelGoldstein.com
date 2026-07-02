@@ -12,6 +12,22 @@
   <script src="/js/config.js" defer></script>
   <script src="/admin/_shared/ui.js" defer></script>
   <script src="/admin/_shared/auth.js" defer></script>
+  <style>
+    .cal-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+    .cal-head h2 { margin: 0; }
+    .cal-ctl { display: flex; align-items: center; gap: 0.5rem; }
+    .cal-label { min-width: 10.5ch; text-align: center; font-weight: 600; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .cal-dow { text-align: center; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted, #8a8177); padding: 4px 0; }
+    .cal-cell { min-height: 84px; border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; padding: 4px 5px; font-size: 0.8rem; overflow: hidden; }
+    .cal-cell--other { opacity: 0.35; }
+    .cal-cell--today { border-color: #b85c1f; box-shadow: inset 0 0 0 1px #b85c1f; }
+    .cal-daynum { font-size: 0.75rem; color: var(--ink-muted, #8a8177); margin-bottom: 3px; }
+    .cal-chip { display: block; width: 100%; text-align: left; border: 0; cursor: pointer; background: #b85c1f; color: #fff; border-radius: 5px; padding: 2px 6px; margin-bottom: 3px; font-size: 0.72rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cal-chip--muted { background: #d8d2c8; color: #4a443c; }
+    .cal-note { margin: 0.75rem 0 0; font-size: 0.8rem; color: var(--ink-muted, #8a8177); }
+    @media (max-width: 720px) { .cal-cell { min-height: 56px; } .cal-chip { font-size: 0.65rem; } }
+  </style>
 </head>
 <body>
 
@@ -56,6 +72,20 @@
     </div>
 
     <div class="admin-card">
+      <div class="cal-head">
+        <h2>Calendar</h2>
+        <div class="cal-ctl">
+          <button class="admin-btn admin-btn--ghost admin-btn--xs" id="cal-prev" type="button" aria-label="Previous month">‹</button>
+          <span class="cal-label" id="cal-label">—</span>
+          <button class="admin-btn admin-btn--ghost admin-btn--xs" id="cal-next" type="button" aria-label="Next month">›</button>
+          <button class="admin-btn admin-btn--ghost admin-btn--xs" id="cal-today" type="button">Today</button>
+        </div>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <p class="cal-note">Site events only for now — click one for the Zoom link &amp; passcode. Calendly Discovery Calls will appear here once the Calendly API is connected.</p>
+    </div>
+
+    <div class="admin-card">
       <h2>Latest subscribers</h2>
       <div id="latest-subs">Loading…</div>
     </div>
@@ -78,6 +108,79 @@ window.adminReady.then(async (ctx) => {
   if (!ctx) return;
   const { sb } = ctx;
   const ui = window.adminUI;
+
+  // ----- Calendar -----
+  const calGrid = document.getElementById('cal-grid');
+  const calLabel = document.getElementById('cal-label');
+  let calCursor = new Date();
+  calCursor.setDate(1);
+
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const dayKey = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  const fmtTime = (d) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+  const loadCalendar = async () => {
+    const y = calCursor.getFullYear(), mo = calCursor.getMonth();
+    calLabel.textContent = calCursor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    const gridStart = new Date(y, mo, 1);
+    gridStart.setDate(1 - gridStart.getDay());          // back to Sunday
+    const gridEnd = new Date(gridStart);
+    gridEnd.setDate(gridStart.getDate() + 42);          // 6 weeks
+
+    const { data: evs, error } = await sb.from('events')
+      .select('*')
+      .gte('starts_at', gridStart.toISOString())
+      .lt('starts_at', gridEnd.toISOString())
+      .neq('status', 'cancelled')
+      .order('starts_at', { ascending: true });
+    if (error) { ui.toast('Calendar load failed: ' + error.message, 'err'); return; }
+
+    const byDay = {};
+    (evs || []).forEach((ev) => {
+      const k = dayKey(new Date(ev.starts_at));
+      (byDay[k] = byDay[k] || []).push(ev);
+    });
+
+    const todayKey = dayKey(new Date());
+    let html = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d) => `<div class="cal-dow">${d}</div>`).join('');
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(gridStart);
+      d.setDate(gridStart.getDate() + i);
+      const k = dayKey(d);
+      const cls = ['cal-cell'];
+      if (d.getMonth() !== mo) cls.push('cal-cell--other');
+      if (k === todayKey) cls.push('cal-cell--today');
+      const chips = (byDay[k] || []).map((ev) => {
+        const muted = ev.status !== 'upcoming' && ev.status !== 'live';
+        return `<button type="button" class="cal-chip${muted ? ' cal-chip--muted' : ''}" data-ev-id="${ui.escape(ev.id)}" title="${ui.escape(ev.title)}">${fmtTime(new Date(ev.starts_at))} ${ui.escape(ev.title)}</button>`;
+      }).join('');
+      html += `<div class="${cls.join(' ')}"><div class="cal-daynum">${d.getDate()}</div>${chips}</div>`;
+    }
+    calGrid.innerHTML = html;
+
+    calGrid.querySelectorAll('.cal-chip').forEach((chip) => chip.addEventListener('click', () => {
+      const ev = (evs || []).find((e) => e.id === chip.dataset.evId);
+      if (!ev) return;
+      const when = new Date(ev.starts_at).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
+      const zoom = ev.zoom_join_url
+        ? `<p style="margin:0 0 6px;"><a class="admin-btn admin-btn--primary admin-btn--xs" href="${ui.escape(ev.zoom_join_url)}" target="_blank" rel="noopener">Join Zoom meeting</a></p>
+           <p style="margin:0 0 6px;word-break:break-all;"><small>${ui.escape(ev.zoom_join_url)}</small></p>
+           ${ev.zoom_password ? `<p style="margin:0;">Passcode: <strong>${ui.escape(ev.zoom_password)}</strong></p>` : ''}`
+        : `<p style="margin:0;color:var(--ink-muted,#8a8177);">No Zoom link on this event yet — add one from the Events page.</p>`;
+      ui.openModal(ev.title, `
+        <p style="margin:0 0 10px;"><strong>${ui.escape(when)}</strong> · ${ev.duration_minutes} min</p>
+        <p style="margin:0 0 14px;">$${(ev.price_cents / 100).toFixed(2).replace(/\.00$/, '')}${ev.capacity ? ` · capacity ${ev.capacity}` : ''} · <span class="admin-pill ${ev.status === 'upcoming' ? 'admin-pill--ok' : 'admin-pill--muted'}">${ui.escape(ev.status)}</span></p>
+        ${zoom}
+        <p style="margin:16px 0 0;"><a href="/admin/events.html">Edit on the Events page →</a></p>
+      `, { footer: false });
+    }));
+  };
+
+  document.getElementById('cal-prev').addEventListener('click', () => { calCursor.setMonth(calCursor.getMonth() - 1); loadCalendar(); });
+  document.getElementById('cal-next').addEventListener('click', () => { calCursor.setMonth(calCursor.getMonth() + 1); loadCalendar(); });
+  document.getElementById('cal-today').addEventListener('click', () => { calCursor = new Date(); calCursor.setDate(1); loadCalendar(); });
+  loadCalendar();
 
   const counts = await Promise.all([
     sb.from('testimonials').select('id', { count: 'exact', head: true }).eq('published', true).eq('featured', true),
