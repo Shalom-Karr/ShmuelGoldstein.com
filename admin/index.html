@@ -244,14 +244,19 @@ window.adminReady.then(async (ctx) => {
     document.getElementById('avail-tbl').innerHTML = !rows.length
       ? '<div class="empty-state"><h3>No availability set</h3><p>Add a weekly window — e.g. Tuesday 9:00 AM – 9:30 AM.</p></div>'
       : `<table class="admin-table">
-          <thead><tr><th>Day</th><th>From</th><th>Until</th><th style="width:100px"></th></tr></thead>
+          <thead><tr><th>Day</th><th>From</th><th>Until</th><th style="width:160px"></th></tr></thead>
           <tbody>${rows.map(r => `<tr data-id="${ui.escape(r.id)}">
             <td><strong>${DAYS[r.day_of_week]}</strong></td>
             <td>${fmtRuleTime(r.start_time)}</td>
             <td>${fmtRuleTime(r.end_time)}</td>
-            <td class="row-actions"><button class="admin-btn admin-btn--danger admin-btn--xs" data-avail-del>Remove</button></td>
+            <td class="row-actions">
+              <button class="admin-btn admin-btn--ghost admin-btn--xs" data-avail-edit>Edit</button>
+              <button class="admin-btn admin-btn--danger admin-btn--xs" data-avail-del>Remove</button>
+            </td>
           </tr>`).join('')}</tbody></table>`;
 
+    document.querySelectorAll('[data-avail-edit]').forEach((b) => b.addEventListener('click', (e) =>
+      openAvailModal(rows.find(r => r.id === e.target.closest('tr').dataset.id))));
     document.querySelectorAll('[data-avail-del]').forEach((b) => b.addEventListener('click', async (e) => {
       const id = e.target.closest('tr').dataset.id;
       if (!(await ui.confirm('Remove this availability window? Existing bookings are not affected.'))) return;
@@ -260,22 +265,24 @@ window.adminReady.then(async (ctx) => {
     }));
   };
 
-  document.getElementById('avail-add').addEventListener('click', () => {
-    const m = ui.openModal('Add availability window', `
+  const openAvailModal = (row = null) => {
+    const isNew = !row;
+    const hm = (t) => String(t || '').slice(0, 5);
+    const m = ui.openModal(isNew ? 'Add availability window' : 'Edit availability window', `
       <div class="admin-field">
         <label for="r-day">Day of week</label>
-        <select id="r-day" class="admin-select">${DAYS.map((d, i) => `<option value="${i}">${d}</option>`).join('')}</select>
+        <select id="r-day" class="admin-select">${DAYS.map((d, i) => `<option value="${i}" ${row && row.day_of_week === i ? 'selected' : ''}>${d}</option>`).join('')}</select>
       </div>
       <div class="admin-grid-2">
         <div class="admin-field">
           <label for="r-start">From (Cleveland time)</label>
-          <input id="r-start" class="admin-input" type="time" value="09:00" required />
+          <input id="r-start" class="admin-input" type="time" value="${isNew ? '09:00' : hm(row.start_time)}" required />
         </div>
         <div class="admin-field">
           <label for="r-end">Until</label>
-          <input id="r-end" class="admin-input" type="time" value="09:30" required />
+          <input id="r-end" class="admin-input" type="time" value="${isNew ? '10:00' : hm(row.end_time)}" required />
         </div>
-      </div>`, { submitLabel: 'Add window' });
+      </div>`, { submitLabel: isNew ? 'Add window' : 'Save' });
     m.submit.addEventListener('click', async () => {
       const payload = {
         day_of_week: parseInt(m.body.querySelector('#r-day').value, 10),
@@ -286,12 +293,17 @@ window.adminReady.then(async (ctx) => {
         ui.toast('End time must be after start time.', 'err'); return;
       }
       m.submit.disabled = true;
-      const { error } = await sb.from('availability_rules').insert(payload);
+      const q = isNew
+        ? sb.from('availability_rules').insert(payload)
+        : sb.from('availability_rules').update(payload).eq('id', row.id);
+      const { error } = await q;
       m.submit.disabled = false;
       if (error) ui.toast(error.message, 'err');
-      else { ui.toast('Added.'); m.close(); loadAvail(); }
+      else { ui.toast(isNew ? 'Added.' : 'Saved.'); m.close(); loadAvail(); }
     });
-  });
+  };
+
+  document.getElementById('avail-add').addEventListener('click', () => openAvailModal());
   loadAvail();
 
   const counts = await Promise.all([
