@@ -81,6 +81,7 @@
 
     <div class="email-tabs">
       <button class="email-tab is-active" data-tab="inbox" type="button">Inbox</button>
+      <button class="email-tab" data-tab="sent" type="button">Sent</button>
       <button class="email-tab" data-tab="compose" type="button">Compose</button>
     </div>
 
@@ -151,14 +152,33 @@ window.adminReady.then(async (ctx) => {
   }
 
   // ----- Tabs -----
+  let currentMailbox = 'inbox';   // 'inbox' | 'sent'
   document.querySelectorAll('.email-tab').forEach((b) => {
     b.addEventListener('click', () => {
       document.querySelectorAll('.email-tab').forEach((x) => x.classList.toggle('is-active', x === b));
       const which = b.dataset.tab;
-      document.getElementById('tab-inbox').hidden = which !== 'inbox';
+      const listView = which === 'inbox' || which === 'sent';
+      document.getElementById('tab-inbox').hidden = !listView;
       document.getElementById('tab-compose').hidden = which !== 'compose';
+      if (listView && which !== currentMailbox) {
+        currentMailbox = which;
+        // UIDs are per-mailbox — reset all state on switch.
+        messages = []; activeUid = null; bodyCache.clear(); inflight.clear();
+        document.getElementById('inbox-pane').innerHTML = '<div class="empty-state"><h3>Pick a message</h3><p>Click any message on the left to read it.</p></div>';
+        applyMailboxLabels();
+        loadInbox();
+      }
     });
   });
+
+  function applyMailboxLabels() {
+    const sent = currentMailbox === 'sent';
+    document.querySelector('#tab-inbox .inbox-toolbar #inbox-search').placeholder =
+      sent ? 'Search subject / recipient / preview…' : 'Search subject / sender / preview…';
+    const sel = document.getElementById('inbox-to');
+    sel.querySelector('option[value=""]').textContent = sent ? 'All recipients' : 'All recipients';
+    document.getElementById('refresh-btn').textContent = sent ? 'Refresh sent' : 'Refresh inbox';
+  }
 
   // ----- Inbox -----
   let messages = [];
@@ -172,7 +192,7 @@ window.adminReady.then(async (ctx) => {
     if (!t) return;
     document.getElementById('inbox-list').textContent = 'Loading…';
     try {
-      const res = await fetch('/.netlify/functions/admin-inbox?limit=25', {
+      const res = await fetch('/.netlify/functions/admin-inbox?limit=25&mailbox=' + currentMailbox, {
         headers: { Authorization: 'Bearer ' + t },
       });
       const data = await res.json();
@@ -246,12 +266,16 @@ window.adminReady.then(async (ctx) => {
       document.getElementById('inbox-list').innerHTML = '<div class="empty-state" style="padding:24px;"><h3>No matches</h3></div>';
       return;
     }
+    const sent = currentMailbox === 'sent';
     document.getElementById('inbox-list').innerHTML = list.map((m) => {
-      const fromName = (m.from && (m.from.name || m.from.address)) || 'Unknown sender';
       const dateStr = m.date ? new Date(m.date).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '';
-      const toFirst = (m.to && m.to[0] && m.to[0].address) || '';
-      return `<div class="inbox-item ${m.unread ? 'is-unread' : ''} ${m.uid === activeUid ? 'is-active' : ''}" data-uid="${m.uid}" title="To: ${ui.escape(toFirst)}">
-        <span class="inbox-from">${ui.escape(fromName)}</span>
+      const toFirst = (m.to && m.to[0] && (m.to[0].name || m.to[0].address)) || '';
+      const primary = sent
+        ? ('To: ' + (toFirst || 'unknown'))
+        : ((m.from && (m.from.name || m.from.address)) || 'Unknown sender');
+      const titleAddr = sent ? ((m.to && m.to[0] && m.to[0].address) || '') : ((m.from && m.from.address) || '');
+      return `<div class="inbox-item ${m.unread && !sent ? 'is-unread' : ''} ${m.uid === activeUid ? 'is-active' : ''}" data-uid="${m.uid}" title="${ui.escape(titleAddr)}">
+        <span class="inbox-from">${ui.escape(primary)}</span>
         <span class="inbox-subject">${ui.escape(m.subject || '(no subject)')}</span>
         <span class="inbox-date">${ui.escape(dateStr)}</span>
       </div>`;
@@ -269,7 +293,7 @@ window.adminReady.then(async (ctx) => {
     if (inflight.has(uid)) return inflight.get(uid);
     const p = (async () => {
       const t = await token();
-      const res = await fetch('/.netlify/functions/admin-inbox?uid=' + encodeURIComponent(uid), {
+      const res = await fetch('/.netlify/functions/admin-inbox?mailbox=' + currentMailbox + '&uid=' + encodeURIComponent(uid), {
         headers: { Authorization: 'Bearer ' + t },
       });
       const m = await res.json();

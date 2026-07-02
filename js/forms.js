@@ -1,23 +1,22 @@
 (function () {
   const forms = document.querySelectorAll('form[data-netlify="true"]');
 
-  const waitForSupabase = async (timeoutMs = 4000) => {
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
-      const sb = typeof window.getSupabase === 'function' ? window.getSupabase() : null;
-      if (sb) return sb;
-      await new Promise((r) => setTimeout(r, 100));
+  // Contact form goes through a Netlify Function (service role) for the same
+  // reason as the newsletter: a direct client insert is blocked by RLS.
+  const submitContact = async (fields) => {
+    try {
+      const res = await fetch('/.netlify/functions/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fields),
+      });
+      if (res.ok) return true;
+      console.warn('[contact]', res.status, await res.text().catch(() => ''));
+      return false;
+    } catch (err) {
+      console.warn('[contact] fetch failed', err);
+      return false;
     }
-    return null;
-  };
-
-  // Contact form still goes via supabase-js (lower volume, JS path is fine).
-  const mirrorContact = async (fields) => {
-    const sb = await waitForSupabase();
-    if (!sb) { console.warn('[contact mirror] Supabase client unavailable'); return false; }
-    const { error } = await sb.from('contact_messages').insert(fields);
-    if (error) { console.warn('[contact mirror]', error.code, error.message); return false; }
-    return true;
   };
 
   // Newsletter goes through a Netlify Function so RLS, CSP, tracking-prevention,
@@ -63,7 +62,7 @@
         const name = (form.querySelector('[name="name"]')?.value || '').trim();
         const subject = (form.querySelector('[name="subject"]')?.value || '').trim();
         const message = (form.querySelector('[name="message"]')?.value || '').trim();
-        saved = await mirrorContact({ name, email, subject, message });
+        saved = await submitContact({ name, email, subject, message });
       } else {
         saved = await subscribeViaFunction(email, 'footer');
       }

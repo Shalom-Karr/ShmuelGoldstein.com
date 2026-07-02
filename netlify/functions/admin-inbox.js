@@ -23,6 +23,10 @@ exports.handler = async (event) => {
   const q = event.queryStringParameters || {};
   const uid = q.uid ? Number(q.uid) : null;
   const limit = Math.max(1, Math.min(MAX_LIST, Number(q.limit) || DEFAULT_LIST));
+  // Only two mailboxes are exposed; Sent path name is provider-specific.
+  const mailbox = q.mailbox === 'sent'
+    ? (process.env.IMAP_SENT_MAILBOX || '[Gmail]/Sent Mail')
+    : 'INBOX';
 
   const client = new ImapFlow({
     host: process.env.IMAP_HOST || 'imap.gmail.com',
@@ -34,7 +38,7 @@ exports.handler = async (event) => {
 
   try {
     await client.connect();
-    const lock = await client.getMailboxLock('INBOX');
+    const lock = await client.getMailboxLock(mailbox);
     try {
       if (uid && Number.isFinite(uid)) {
         const msg = await client.fetchOne(String(uid), { source: true, envelope: true, flags: true }, { uid: true });
